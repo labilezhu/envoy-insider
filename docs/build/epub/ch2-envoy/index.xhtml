@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Envoy 内幕</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="envoy">
+<h1>Envoy 内幕</h1>
+<p>要深入了解 Istio ，那么先得了解流量的核心 Envoy Proxy。这里有三个认知层次：</p>
+<ol class="arabic simple">
+<li><p>了解原生的 可编程代理 <code class="docutils literal notranslate"><span class="pre">Envoy</span> <span class="pre">Proxy</span></code> 架构</p></li>
+<li><p>了解 Istio 的<code class="docutils literal notranslate"><span class="pre">Istio</span> <span class="pre">定制版</span> <span class="pre">Envoy</span> <span class="pre">Proxy</span></code>: <a class="reference external" href="https://github.com/istio/proxy">github.com/istio/proxy</a> 做了什么扩展</p></li>
+<li><p>了解 istiod 如何编程控制 <code class="docutils literal notranslate"><span class="pre">Istio</span> <span class="pre">定制版</span> <span class="pre">Envoy</span> <span class="pre">Proxy</span></code> 以实现服务网格功能</p></li>
+</ol>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="envoy-overview.xhtml">原生的可编程代理 Envoy</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="envoy-overview.xhtml#id1">一点历史</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envoy-overview.xhtml#c">为什么用 C++ 实现</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-overview.xhtml#envoy-proxy-l1">Envoy Proxy L1 架构</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="envoy-istio-conf-eg.xhtml">Istio 下 Envoy 配置举例</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-conf-eg.xhtml#id1">实验环境</a></li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-conf-eg.xhtml#inbound">Inbound 数据流 “推断”</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envoy-istio-conf-eg.xhtml#id3">用日志检查数据流</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-conf-eg.xhtml#outbound">Outbound 数据流 “推断”</a></li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-conf-eg.xhtml#bpftrace">用 bpftrace 检查数据流</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="envoy-high-level-flow/envoy-high-level-flow.xhtml">Envoy 抽象主流程与概念</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="envoy-high-level-flow/envoy-high-level-flow.xhtml#upstream-upstream">再说 upstream/upstream</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="arch/arch.xhtml">架构</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="arch/oop/oop.xhtml">源码设计</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="arch/oop/oop.xhtml#id2">设计模式与行话</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="arch/oop/oop.xhtml#callback">Callback回调设计模式</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="arch/oop/oop.xhtml#id3">子系统</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="arch/event-driven/event-driven.xhtml">事件驱动</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="arch/event-driven/event-driven.xhtml#http">HTTP 反向代理的总流程</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/event-driven/event-driven.xhtml#downstream-tcp">Downstream TCP 连接建立</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/event-driven/event-driven.xhtml#id2">事件处理抽象框架</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/event-driven/event-driven.xhtml#libevent">libevent 核心思想</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="arch/event-driven/libevent.xhtml">libevent 核心思想</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="arch/event-driven/libevent.xhtml#event">event</a></li>
+<li class="toctree-l5"><a class="reference internal" href="arch/event-driven/libevent.xhtml#event-base">event_base</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#setting-up-a-default-event-base">Setting up a default event_base</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="arch/event-driven/libevent.xhtml#event-loop">event loop</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#function">function</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="arch/event-driven/libevent.xhtml#flags">flags</a></li>
+<li class="toctree-l7"><a class="reference internal" href="arch/event-driven/libevent.xhtml#returns">returns</a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#pseudocode">Pseudocode</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#internal-time-cache">internal time cache</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#dumping-the-event-base-status">Dumping the event_base status</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#running-a-function-over-every-event-in-an-event-base">Running a function over every event in an event_base</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="arch/event-driven/libevent.xhtml#working-with-events">Working with events</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#event-state">event state</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#constructing-event-objects">Constructing event objects</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="arch/event-driven/libevent.xhtml#example">example</a></li>
+<li class="toctree-l7"><a class="reference internal" href="arch/event-driven/libevent.xhtml#event-flags">event flags</a></li>
+<li class="toctree-l7"><a class="reference internal" href="arch/event-driven/libevent.xhtml#callback-argument">callback argument</a></li>
+<li class="toctree-l7"><a class="reference internal" href="arch/event-driven/libevent.xhtml#about-event-persistence">About Event Persistence</a></li>
+<li class="toctree-l7"><a class="reference internal" href="arch/event-driven/libevent.xhtml#constructing-signal-events">Constructing signal events</a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#making-events-pending-and-non-pending">Making events pending and non-pending</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#events-with-priorities">Events with priorities</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#finding-the-currently-running-event">Finding the currently running event</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#inspecting-event-status">Inspecting event status</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/event-driven/libevent.xhtml#manually-activating-an-event">Manually activating an event</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="arch/event-driven/event-driven.xhtml#id3">扩展阅读</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="arch/thread-model/thread-model.xhtml">线程模型</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="arch/thread-model/thread-model.xhtml#id2">线程概述</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/thread-model/thread-model.xhtml#thread-local">Thread Local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/thread-model/thread-model.xhtml#ref">Ref</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="arch/listener/listener.xhtml">Listener</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="arch/listener/listener.xhtml#id1">Listener 举例</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/listener/listener.xhtml#id2">Listener 内部组件</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="arch/listener/listener.xhtml#listener-filters">Listener filters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="arch/listener/listener.xhtml#network-filter-chains">Network Filter Chains</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="arch/listener/listener.xhtml#id4">Listener 相关的组件和启动顺序</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="arch/listener/listener.xhtml#id6">代码级的启动顺序</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="arch/listener/listener.xhtml#id7">求证过程</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="arch/listener/listener-connection.xhtml">Listener 连接建立细节</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="arch/listener/listener-connection.xhtml#tcp">TCP 连接建立步骤</a></li>
+<li class="toctree-l5"><a class="reference internal" href="arch/listener/listener-connection.xhtml#id1">求证过程</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="arch/network-filter/network-filter.xhtml">Network Filter</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="arch/network-filter/network-filter.xhtml#network-filter-chains">Network Filter Chains</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/network-filter/network-filter.xhtml#id1">Network Filter 概述</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="arch/network-filter/network-filter.xhtml#id2">Network Filter 框架设计概念</a></li>
+<li class="toctree-l4"><a class="reference internal" href="arch/network-filter/network-filter.xhtml#id3">Network Filter 对象关系</a></li>
+<li class="toctree-l4"><a class="reference internal" href="arch/network-filter/network-filter.xhtml#id5">Network Filter 框架设计细说</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="arch/network-filter/network-filter.xhtml#network-filter-readfilter">Network Filter - ReadFilter 协作</a></li>
+<li class="toctree-l5"><a class="reference internal" href="arch/network-filter/network-filter.xhtml#network-filter-writefilter">Network Filter - WriteFilter 协作</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="arch/network-filter/network-filter.xhtml#id8">扩展阅读</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="arch/http/http-connection-manager/http-connection-manager.xhtml">http connection manager</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="arch/http/http-connection-manager/http-connection-manager.xhtml#http-filter">http filter 抽象对象定义</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/http/http-connection-manager/http-connection-manager.xhtml#http-filter-c">http filter C++类关系</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="arch/http/http-connection-manager/hcm-event-process.xhtml">HCM upstream/downstream 事件驱动协作下的 HTTP 反向代理流程</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="arch/http/http-connection-manager/hcm-event-process.xhtml#http">HTTP 反向代理的总流程</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="arch/http/http-connection-manager/hcm-event-process.xhtml#downstream-read-request">Downstream Read Request 模块协作</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="arch/http/http-connection-manager/hcm-event-process.xhtml#downstream-request-router">Downstream Request Router 模块协作</a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="arch/http/http-connection-manager/hcm-event-process.xhtml#upstream-write-request">Upstream Write Request 模块协作</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/http/http-connection-manager/hcm-event-process.xhtml#upstream-read-response">Upstream Read Response 模块协作</a></li>
+<li class="toctree-l6"><a class="reference internal" href="arch/http/http-connection-manager/hcm-event-process.xhtml#downstream-write-response">Downstream Write Response 模块协作</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="arch/http/http-connection-manager/hcm-event-process.xhtml#id4">求证过程</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="arch/http/router/router.xhtml">Router</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="arch/http/router/router.xhtml#id2">扩展阅读</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="arch/stream/http1.1-stream.xhtml">HTTP/1.1 Stream(草稿)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="arch/flow-control/flow-control.xhtml">流控 - Flow Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#id1">一些流控相关的术语</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#tcp">TCP 流控实现</a></li>
+<li class="toctree-l3"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#http2">HTTP2 流控实现</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#id2">HTTP2 流控总体流程</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#downstream-upstream-connection">Downstream/Upstream connection 拥塞概述</a></li>
+<li class="toctree-l5"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#upstream-connection-upstream-http-stream">Upstream connection 与 Upstream http stream 同时拥塞场景</a></li>
+<li class="toctree-l5"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#upstream-router-filter">Upstream 拥塞时 <code class="docutils literal notranslate"><span class="pre">Router::Filter</span></code> 的协作</a></li>
+<li class="toctree-l5"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#downstream-http-connectionmanagerimpl">Downstream 拥塞时 Http::ConnectionManagerImpl 的协作</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#http-decode-encode-filter">HTTP decode/encode filter 流控实现细节</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#decoder-filters">Decoder filters</a></li>
+<li class="toctree-l5"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#encoder-filters">Encoder filters</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#http-and-http-2-codec-upstream-send-buffer">HTTP and HTTP/2 codec upstream send buffer</a></li>
+<li class="toctree-l4"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#http-and-http-2-network-upstream-network-buffer">HTTP and HTTP/2 network upstream network buffer</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="arch/flow-control/flow-control.xhtml#ref">Ref.</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="req-resp-flow-timeline/req-resp-flow-timeline.xhtml">Envoy 请求与响应调度</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id1">请求与响应调度</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id2">相关组件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id3">相关的监控指标</a></li>
+<li class="toctree-l3"><a class="reference internal" href="req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id4">Envoy 请求调度流程</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id7">请求与响应调度时序线</a></li>
+<li class="toctree-l2"><a class="reference internal" href="req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id9">总结</a></li>
+<li class="toctree-l2"><a class="reference internal" href="req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id10">一些有趣的扩展阅读</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="connection-life/connection-life.xhtml">HTTP 连接生命周期管理</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="connection-life/connection-life.xhtml#upstream-downstream">Upstream/Downstream 连接解藕</a></li>
+<li class="toctree-l2"><a class="reference internal" href="connection-life/connection-life.xhtml#id1">连接超时相关配置参数</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="connection-life/connection-life.xhtml#idle-timeout">idle_timeout</a></li>
+<li class="toctree-l3"><a class="reference internal" href="connection-life/connection-life.xhtml#max-connection-duration">max_connection_duration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="connection-life/connection-life.xhtml#max-requests-per-connection">max_requests_per_connection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="connection-life/connection-life.xhtml#drain-timeout-for-downstream-only">drain_timeout - for downstream only</a></li>
+<li class="toctree-l3"><a class="reference internal" href="connection-life/connection-life.xhtml#delayed-close-timeout-for-downstream-only">delayed_close_timeout - for downstream only</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="connection-life/connection-life.xhtml#envoy">Envoy 连接关闭后的竞态条件</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="connection-life/connection-life-race.xhtml">Envoy 连接关闭后的竞态条件</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="connection-life/connection-life-race.xhtml#envoy-downstream-upstream">Envoy 与 Downstream/Upstream 连接状态不同步</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="connection-life/connection-life-race.xhtml#downstream-envoy">Downstream 向 Envoy 关闭中的连接发送请求</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="connection-life/connection-life-race.xhtml#id1">Envoy 实现上的缓解</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="connection-life/connection-life-race.xhtml#server-prematurely-early-closes-connection">缓解 服务端过早关闭连接(Server Prematurely/Early Closes Connection)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="connection-life/connection-life-race.xhtml#envoy-upstream-upstream">Envoy 向已被 Upstream 关闭的 Upstream 连接发送请求</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="connection-life/connection-life-race.xhtml#envoy-2">Envoy 实现上的缓解 2</a></li>
+<li class="toctree-l6"><a class="reference internal" href="connection-life/connection-life-race.xhtml#istio">Istio 配置上缓解</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="envoy-istio-metrics/index.xhtml">Istio 与 Envoy 指标</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-metrics/envoy-istio-metrics-overview.xhtml">Istio 与 Envoy 指标概述</a></li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-metrics/metrics-req-resp-flow-timeline.xhtml">Envoy 请求与响应时序线上的指标</a></li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml">Envoy 指标</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#id1">Envoy 指标概述</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#tag">Tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#id2">指标数据类型</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#id3">指标释义</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#cluster-manager">cluster manager</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#http-connection-manager-hcm">http connection manager(HCM)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#listeners">listeners</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#server">server</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#watch-dog">watch dog</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#event-loop">Event loop</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#id4">配置说明</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#config-bootstrap-v3-bootstrap">config.bootstrap.v3.Bootstrap</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#config-metrics-v3-statsconfig">config.metrics.v3.StatsConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/envoy-stat.xhtml#config-metrics-v3-statsmatcher">config.metrics.v3.StatsMatcher</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml">Istio 指标</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#istio-metrics">Istio 自己的 Metrics</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#id1">标准指标说明</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#metrics">Metrics</a></li>
+<li class="toctree-l5"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#prometheus-labels">Prometheus 的 Labels</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#id2">使用</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#istio-proxy-metrics">istio-proxy 与应用的 Metrics 整合输出</a></li>
+<li class="toctree-l5"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#id4">定制：为 Metrics 增加维度</a></li>
+<li class="toctree-l5"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#request-response">定制：加入 request / response 元信息维度</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#id5">工作原理</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#istio-stat-filter">istio stat filter 使用</a></li>
+<li class="toctree-l5"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#istio-stat-plugin">istio stat Plugin 实现</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#envoy-metrics">Envoy 内置的 Metrics</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#id6">定制 Envoy 内置的 Metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#id7">原理</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-istio-metrics/istio-stat.xhtml#istio-proxy">总结：Istio-Proxy 指标地图</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-istio-metrics/envoy-stat-impl.xhtml">Envoy 指标的实现(草稿)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="upstream/upstream.xhtml">Upstream</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="upstream/connection-pooling/connection-pooling.xhtml">连接池</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="upstream/connection-pooling/connection-pooling.xhtml#tcp-proxy">TCP Proxy 连接池</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="upstream/connection-pooling/connection-pooling.xhtml#id2">TCP Proxy 连接池概述</a></li>
+<li class="toctree-l4"><a class="reference internal" href="upstream/connection-pooling/connection-pooling.xhtml#id3">TCP Proxy 连接池详述</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="upstream/connection-pooling/connection-pooling.xhtml#http">HTTP 连接池</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="upstream/circuit-breaking/circuit-breaking.xhtml">Circuit Breaking(草稿)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="upstream/circuit-breaking/circuit-breaking.xhtml#id1">参考</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

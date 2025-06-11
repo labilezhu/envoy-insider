@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Service Mesh 的一些基础概念</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="service-mesh">
+<h1>Service Mesh 的一些基础概念</h1>
+<p>说好了，这书名叫《xyz内幕》，为何还要说基础概念？ 好吧，为了：</p>
+<ul class="simple">
+<li><p>内容体系完整性</p></li>
+<li><p>统一后面用到的术语</p></li>
+</ul>
+<section id="id1">
+<h2>服务调用关系概念</h2>
+<section id="upstream-downstream">
+<h3>Upstream &amp; Downstream</h3>
+<p>从 Envoy 的角度看：</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">upstream</span></code>:   流量方向中的角色：[downstream] –&gt; envoy –&gt; <strong>[upstream]</strong>。这里我避免用中文词 <code class="docutils literal notranslate"><span class="pre">上游/下游</span></code>，因为概念上没有统一，也容易和英文误解。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">downstream</span></code>:  流量方向中的角色：<strong>[downstream]</strong> –&gt; envoy –&gt; [upstream]</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">警告</p>
+<p>需要注意的是，upstream 与 downstream 是个相对于观察者的概念。</p>
+<p>如场景: <code class="docutils literal notranslate"><span class="pre">service</span> <span class="pre">A</span></code> ⤜调用➙ <code class="docutils literal notranslate"><span class="pre">service</span> <span class="pre">B</span></code>  ⤜调用➙ <code class="docutils literal notranslate"><span class="pre">service</span> <span class="pre">C</span></code> :</p>
+<ul class="simple">
+<li><p>如果站在 <code class="docutils literal notranslate"><span class="pre">service</span> <span class="pre">C</span></code> 上，我们在把<code class="docutils literal notranslate"> <span class="pre">service</span> <span class="pre">B</span></code> 叫 downstream;</p></li>
+<li><p>如果站在 <code class="docutils literal notranslate"><span class="pre">service</span> <span class="pre">A</span></code> 上，我们把 <code class="docutils literal notranslate"><span class="pre">service</span> <span class="pre">B</span></code> 叫 upstream。</p></li>
+</ul>
+</div>
+</section>
+<section id="upstream-cluster-downstream-cluster">
+<h3>Upstream Cluster &amp; Downstream Cluster</h3>
+<p><code class="docutils literal notranslate"><span class="pre">Upstream</span> <span class="pre">Cluster</span></code> / <code class="docutils literal notranslate"><span class="pre">Downstream</span> <span class="pre">Cluster</span></code> 主要是 Envoy 中的概念。</p>
+<p>一般来说，一个 <code class="docutils literal notranslate"><span class="pre">Upstream</span></code> / <code class="docutils literal notranslate"><span class="pre">Downstream</span></code> 指代一个具体的主机(Host)。而 <code class="docutils literal notranslate"><span class="pre">Upstream</span> <span class="pre">Cluster</span></code> / <code class="docutils literal notranslate"><span class="pre">Downstream</span> <span class="pre">Cluster</span></code> 是指运行同一服务的，同构的的一群主机。在 k8s 环境下，一般就是对应同一 <code class="docutils literal notranslate"><span class="pre">k8s</span> <span class="pre">Deployment</span></code> 的所有 POD 了。</p>
+</section>
+<section id="inbound-outbound">
+<h3>Inbound &amp; Outbound</h3>
+<p>从 K8s 的 pod 的角度看：</p>
+<figure class="align-default" id="inboundoutbound">
+<img alt="Inbound与Outbound概念" src="../_images/inbound-outbound-concept.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Inbound与Outbound概念</em>
+<a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Finbound-outbound-concept.drawio.svg">用 Draw.io 打开</a></span></p>
+</figcaption>
+</figure>
+<p>有3个服务，自下而上地调用。</p>
+<ol class="arabic simple">
+<li><p>client</p></li>
+<li><p>fortio-server:8080</p></li>
+<li><p>fortio-server-l2:8080</p></li>
+</ol>
+<p>其实调用关系就是:</p>
+<blockquote>
+<div><p>client ➔ fortio-server:8080 ➔ fortio-server-l2:8080</p>
+</div></blockquote>
+<p>上图这样排版也是想直接反映 <strong>up</strong>stream 和 <strong>down</strong>stream 字面义。图中需要解释的，或者只有 inbound / outbound 这两个术语。首先，什么是 <code class="docutils literal notranslate"><span class="pre">bound</span></code>。</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bound</span></code>: 字面意为边界。有人译为<code class="docutils literal notranslate"><span class="pre">站（名词）</span></code>。而在现实的 k8s + istio 环境中，可以理解为 pod / service</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inbound</span></code>: 有人译为<code class="docutils literal notranslate"><span class="pre">入站</span></code>。而在现实的 k8s + istio 环境中，可以理解为流量从 pod 外部进入 pod。即服务的被调用流量</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">outbound</span></code>: 有人译为<code class="docutils literal notranslate"><span class="pre">出站</span></code>。而在现实的 k8s + istio 环境中，可以理解为流量从 pod 内部输出到 pod 外部。</p></li>
+</ul>
+<blockquote>
+<div><p>需要注意的是，对于同一个调用请求。他可以是调用者 service 的 outbound，同时也是被调用者的 inbound。如上图。</p>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Upstream</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="upstream">
+<h1>Upstream</h1>
+<p>Envoy 的 Upstream 功能，由  <code class="docutils literal notranslate"><span class="pre">Cluster</span> <span class="pre">Manager</span></code> / <code class="docutils literal notranslate"><span class="pre">Load</span> <span class="pre">Balancer</span></code> / <code class="docutils literal notranslate"><span class="pre">Connection</span> <span class="pre">Pool</span></code>  三大模块去实现。这几个模块与 <code class="docutils literal notranslate"><span class="pre">Network</span> <span class="pre">Filter</span></code> 之间协作，完成了面向 Upstream 的流量调整与转发功能。</p>
+<ol class="arabic simple">
+<li><p>首先，每个 worker thread 有自己专用的 <code class="docutils literal notranslate"><span class="pre">Cluster</span> <span class="pre">Manager</span></code> / <code class="docutils literal notranslate"><span class="pre">Load</span> <span class="pre">Balancer</span></code> / <code class="docutils literal notranslate"><span class="pre">Connection</span> <span class="pre">Pool</span></code>  实例。 当 Envoy accept 一个 downstream connection 时，会选择一个 worker thread 作为 <code class="docutils literal notranslate"><span class="pre">owner</span> <span class="pre">thread</span></code>。</p></li>
+<li><p>并在这个<code class="docutils literal notranslate"><span class="pre">owner</span> <span class="pre">thread</span></code> 内创建专用的 <code class="docutils literal notranslate"><span class="pre">Network</span> <span class="pre">Filter</span></code> 实例。</p></li>
+<li><p>之后所有这个 downstream connection 的相关的操作，包括所有的相关的 upstream 操作，都在这个 <code class="docutils literal notranslate"><span class="pre">owner</span> <span class="pre">thread</span></code> 上执行。</p></li>
+</ol>
+<p>本书把这些关联的 downstream / upstream 以及相关的 <code class="docutils literal notranslate"><span class="pre">Network</span> <span class="pre">Filter</span></code> 实例，称为 <code class="docutils literal notranslate"><span class="pre">Downstream-Upstream-Bundle</span></code> 。
+而这个 <code class="docutils literal notranslate"><span class="pre">owner</span> <span class="pre">thread</span></code> 的 <code class="docutils literal notranslate"><span class="pre">Cluster</span> <span class="pre">Manager</span></code> / <code class="docutils literal notranslate"><span class="pre">Load</span> <span class="pre">Balancer</span></code> / <code class="docutils literal notranslate"><span class="pre">Connection</span> <span class="pre">Pool</span></code> 实例是在同一 <code class="docutils literal notranslate"><span class="pre">owner</span> <span class="pre">thread</span></code> 上的所有 <code class="docutils literal notranslate"><span class="pre">Downstream-Upstream-Bundle</span></code> 所共享的。</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="connection-pooling/connection-pooling.xhtml">连接池</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="connection-pooling/connection-pooling.xhtml#tcp-proxy">TCP Proxy 连接池</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="connection-pooling/connection-pooling.xhtml#id2">TCP Proxy 连接池概述</a></li>
+<li class="toctree-l3"><a class="reference internal" href="connection-pooling/connection-pooling.xhtml#id3">TCP Proxy 连接池详述</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="connection-pooling/connection-pooling.xhtml#http">HTTP 连接池</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="circuit-breaking/circuit-breaking.xhtml">Circuit Breaking(草稿)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="circuit-breaking/circuit-breaking.xhtml#id1">参考</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

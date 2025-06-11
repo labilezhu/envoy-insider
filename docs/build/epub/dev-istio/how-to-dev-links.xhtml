@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Istio 开发入门参考列表</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="istio">
+<h1>Istio 开发入门参考列表</h1>
+<section id="id1">
+<h2>代码说明</h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/istio/istio/wiki/Using-the-Code-Base">Using the Code Base</a></p></li>
+</ul>
+</section>
+<section id="id2">
+<h2>设计文档</h2>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference external" href="https://drive.google.com/drive/folders/0ADmbrU7ueGOUUk9PVA">Istio Community Google Driver - Design Docs</a></p></li>
+<li><p><a class="reference external" href="https://github.com/istio/community/blob/master/CONTRIBUTING.md#design-documents">https://github.com/istio/community/blob/master/CONTRIBUTING.md#design-documents</a></p></li>
+</ul>
+</div></blockquote>
+<p>Any substantial design deserves a design document. Design documents are written with Google Docs and should be shared with the community by adding the doc to our <a class="reference external" href="https://drive.google.com/corp/drive/folders/0ADmbrU7ueGOUUk9PVA">shared Drive</a> and sending a note to the appropriate working group to let people know the doc is there. To get write access to the drive, you’ll need to be a <a class="reference external" href="https://github.com/istio/community/blob/master/ROLES.md#member">member</a> of the Istio organization.</p>
+<p>Anybody can access the shared Drive for reading. To get access to comment, join the <a class="reference external" href="https://groups.google.com/forum/#!forum/istio-team-drive-access">istio-team-drive-access&#64;</a> group. Once you’ve done that, head to the <a class="reference external" href="https://drive.google.com/corp/drive/folders/0ADmbrU7ueGOUUk9PVA">shared Drive</a> and behold all the docs.</p>
+<p>When documenting a new design, we recommend a 2-step approach:</p>
+<ol class="arabic simple">
+<li><p>Use the short-form <a class="reference external" href="https://docs.google.com/document/d/1ewJoCcw5-04crH-M0xw4zFxz1cfwVCPnNyW4K3m4Yyc/template/preview">RFC template</a> to outline your ideas and get early feedback.</p></li>
+<li><p>Once you have received sufficient feedback and consensus, you may use the longer-form <a class="reference external" href="https://docs.google.com/document/d/16FLQK8uhhic1ovKnnOG3OXJjFKs2aHnSmbximidpKwM/template/preview">design doc template</a> to specify and discuss your design in more details.</p></li>
+</ol>
+<p>To use either template, open the template and select “Use Template” in order to bootstrap your document.</p>
+</section>
+<section id="id3">
+<h2>开发环境</h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/istio/istio/wiki/Preparing-for-Development">Preparing for Development</a></p></li>
+</ul>
+</section>
+<section id="id4">
+<h2>Istio 项目健康监控</h2>
+<p>The CNCF maintains a large number of dashboards helping us understand the overall health of the Istio project. Head to <a class="reference external" href="https://istio.teststats.cncf.io">https://istio.teststats.cncf.io</a> for the goodies.</p>
+</section>
+<section id="id5">
+<h2>论坛</h2>
+<p><a class="reference external" href="https://discuss.istio.io/latest">https://discuss.istio.io/latest</a></p>
+</section>
+<section id="id6">
+<h2>参与开发 Istio</h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://istio.io/latest/get-involved/">Get involved</a></p></li>
+<li><p><a class="reference external" href="https://groups.google.com/g/istio-team-drive-access">开通开发文档协同 Google Driver</a></p></li>
+<li><p><a class="reference external" href="https://drive.google.com/drive/folders/0ADmbrU7ueGOUUk9PVA">开发文档协同 Google Driver</a></p></li>
+</ul>
+<section id="id7">
+<h3>工作组</h3>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/istio/community/blob/master/WORKING-GROUPS.md">https://github.com/istio/community/blob/master/WORKING-GROUPS.md</a></p>
+</div></blockquote>
+<p>Most community activity is organized into <em>working groups</em>.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/istio/community/blob/master/WORKING-GROUPS.md#working-group-meetings">Working group meetings</a></p></li>
+<li><p><a class="reference external" href="https://github.com/istio/community/blob/master/WORKING-GROUPS.md#working-group-leads">Working group leads</a></p></li>
+<li><p><a class="reference external" href="https://github.com/istio/community/blob/master/WORKING-GROUPS.md#getting-in-touch">Getting in touch</a></p></li>
+</ul>
+<p>Working groups follow the <a class="reference external" href="https://github.com/istio/community/blob/master/CONTRIBUTING.md">contributing</a> guidelines although each of these groups may operate a little differently depending on their needs and workflow.</p>
+<p>When the need arises, a new working group can be created, please post to <a class="reference external" href="https://discuss.istio.io/c/technical-oversight-committee">technical-oversight-committee</a> working group if you think a new group is necessary.</p>
+<p>The working groups generate design docs which are kept in a shared Google Drive. Anybody can access the drive for reading and commenting. To get access simply join the <a class="reference external" href="https://groups.google.com/forum/#!forum/istio-team-drive-access">istio-team-drive-access&#64;</a> group. Once you’ve done that, head to the <a class="reference external" href="https://drive.google.com/drive/folders/0ADmbrU7ueGOUUk9PVA">Community Drive</a> and behold all the docs.</p>
+<p>The current working groups are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Group</p></th>
+<th class="head"><p>Design Docs</p></th>
+<th class="head"><p>Discussion Forum</p></th>
+<th class="head"><p>Slack Channel</p></th>
+<th class="head"><p>Meeting Notes</p></th>
+<th class="head"><p>Meeting Link</p></th>
+<th class="head"><p>Meeting Recordings</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Docs</p></td>
+<td><p>Folder</p></td>
+<td><p>Forum</p></td>
+<td><p>#docs</p></td>
+<td><p>Notes</p></td>
+<td><p>Hangouts Meet</p></td>
+<td><p>n/a</p></td>
+<td><p>User docs, information architecture, istio.io infrastructure</p></td>
+</tr>
+<tr class="row-odd"><td><p>Environments</p></td>
+<td><p>Folder</p></td>
+<td><p>Forum</p></td>
+<td><p>#environments</p></td>
+<td><p>Notes</p></td>
+<td><p>Hangouts Meet</p></td>
+<td><p>YouTube</p></td>
+<td><p>Raw VM support, Hybrid Mesh, Mac/Windows support, Cloud Foundry integration</p></td>
+</tr>
+<tr class="row-even"><td><p>Networking</p></td>
+<td><p>Folder</p></td>
+<td><p>Forum</p></td>
+<td><p>#networking</p></td>
+<td><p>Notes</p></td>
+<td><p>Hangouts Meet</p></td>
+<td><p>YouTube</p></td>
+<td><p>Traffic Management, TCP Support, Additional L7 protocols, Proxy injection</p></td>
+</tr>
+<tr class="row-odd"><td><p>Extensions and Telemetry</p></td>
+<td><p>Folder</p></td>
+<td><p>Forum</p></td>
+<td><p>#extensions-telemetry</p></td>
+<td><p>Notes</p></td>
+<td><p>Main Group Hangouts Meet, Wasm SIG Hangout Meet</p></td>
+<td><p>YouTube</p></td>
+<td><p>WebAssembly based extensibility, Istio extensions for features such as Rate Limiting, Tracing, Monitoring, Logging</p></td>
+</tr>
+<tr class="row-even"><td><p>Product Security</p></td>
+<td><p>Folder</p></td>
+<td><p>Report a vulnerability</p></td>
+<td><p></p></td>
+<td><p>Notes</p></td>
+<td><p>Hangouts Meet</p></td>
+<td><p></p></td>
+<td><p>Product Security: Vulnerability, security guidelines, threats</p></td>
+</tr>
+<tr class="row-odd"><td><p>Security</p></td>
+<td><p>Folder</p></td>
+<td><p>Forum</p></td>
+<td><p>#security</p></td>
+<td><p>Notes</p></td>
+<td><p>Hangouts Meet</p></td>
+<td><p>YouTube</p></td>
+<td><p>Service-to-service Auth, Identity/CA/SecretStore plugins, Identity Federation, End User Auth, Authority Delegation, Auditing</p></td>
+</tr>
+<tr class="row-even"><td><p>Test and Release</p></td>
+<td><p>Folder</p></td>
+<td><p>Forum</p></td>
+<td><p>#test-and-release</p></td>
+<td><p>Notes</p></td>
+<td><p>Hangouts Meet</p></td>
+<td><p>YouTube</p></td>
+<td><p>Build, test, release</p></td>
+</tr>
+<tr class="row-odd"><td><p>User Experience</p></td>
+<td><p>UX Config (old)</p></td>
+<td><p>Forum</p></td>
+<td><p>#user-experience #config</p></td>
+<td><p>Notes</p></td>
+<td><p>WebEx</p></td>
+<td><p>YouTube</p></td>
+<td><p>User experience across Istio, API and CLI guidelines and support</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

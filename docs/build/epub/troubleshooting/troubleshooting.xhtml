@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Troubleshooting - 问题排查</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="troubleshooting">
+<h1>Troubleshooting - 问题排查</h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tls-traffic/decrypt-dump-tls-traffic.xhtml">Decrypt and Dump TLS Traffic - 解密与监听 TLS 流量</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tls-traffic/decrypt-dump-tls-traffic.xhtml#tls-key-log-feature">TLS key log feature</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tls-traffic/decrypt-dump-tls-traffic.xhtml#envoy-key-log">Envoy Key Log 配置</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tls-traffic/decrypt-dump-tls-traffic.xhtml#extensions-transport-sockets-tls-v3-tlskeylog">extensions.transport_sockets.tls.v3.TlsKeyLog</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tls-traffic/decrypt-dump-tls-traffic.xhtml#decryption-tools">Decryption Tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tls-traffic/decrypt-dump-tls-traffic.xhtml#key-log-format">Key Log Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tls-traffic/decrypt-dump-tls-traffic.xhtml#ref">Ref</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml">TCP Proxy half-closed connection leak for 1 hour in some scenarios</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#base-knowledge">Base knowledge</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#conntrack-base-knowledge">Conntrack base knowledge</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#tcp">TCP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#conntrack-table">Conntrack table</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#environment">Environment</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#testing-pod">Testing POD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#tcp-service-pod">TCP service pod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#enable-conntrack-s-invalid-packet-log-on-testing-pod">enable conntrack’s invalid packet log on Testing POD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#skills">skills</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#nsenter-network-namespace">nsenter network namespace</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#socket-leak-occupy-on-fin-wait2">socket leak &amp; occupy on FIN_WAIT2</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#tcpproxy-connections-established">1. TCPProxy: connections ESTABLISHED</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#tcpproxy-upstream-service-active-close-connection">2. TCPProxy: upstream service active close connection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#after-60s-conntrack-table-close-wait-entry-timeout">3. after 60s, conntrack table CLOSE_WAIT entry timeout</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#app-close-connection-fin-not-reach-peer">4. app close connection - FIN not reach peer</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml">App outbound connecting timed out because App selected a ephemeral port which collisions with the existing socket on 15001(outbound) listener</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#base-knowledge">Base knowledge</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#tcp">TCP</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#tcp-challenge-ack">TCP Challenge ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#conntrack-table">Conntrack table</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#environment">Environment</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#testing-pod">Testing POD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#tcp-service-pod">TCP service pod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#enable-conntrack-s-invalid-packet-log-on-testing-pod">enable conntrack’s invalid packet log on Testing POD</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#new-connection-timeout">New connection timeout</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#app-build-connection-on-the-same-ephemeral-port">App build connection on the same ephemeral port</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#case-1-connect-timed-out-by-collision-ephemeral-port">Case 1: connect timed out by collision ephemeral port</a></li>
+<li class="toctree-l4"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#case-2-connect-by-collision-ephemeral-port-but-seq-no-happens-to-be-in-the-tcp-window-of-the-old-connection">Case 2: connect by collision ephemeral port but seq-no happens to be in the TCP window of the old connection</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#skills">Skills</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml">因配置 Envoy 保留 HTTP/1 header 大小写，在混合 HTTP1 和 HTTP2 的 Istio 网格上意外禁用了 HTTP/2</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id1">动机</a></li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id2">症状</a></li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id3">术语</a></li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id4">背景知识</a></li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id5">调查</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#outbound-istio-proxy-debug-log">outbound istio-proxy 的 debug log</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#evnoy-listener">Evnoy Listener</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#envoy-upstream-cluster-meta-data">Envoy upstream cluster 的 meta-data</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id6">问题根源</a></li>
+<li class="toctree-l2"><a class="reference internal" href="istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id7">结语</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

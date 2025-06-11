@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Listener 连接建立细节</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="listener">
+<h1>Listener 连接建立细节</h1>
+<p>事件驱动和连接的建立的过程和关系：
+<img alt="envoy-event-model-accept" src="../../../_images/envoy-event-model-accept.drawio.svg" /></p>
+<ol class="arabic simple">
+<li><p>Envoy worker 线程挂起在 <code class="docutils literal notranslate"><span class="pre">epoll_wait()</span></code> 方法中。线程被移出 kernel 的 runnable queue。线程睡眠。</p></li>
+<li><p>client 建立连接，server 内核完成3次握手，触发 listen socket 事件。</p>
+<ul class="simple">
+<li><p>操作系统把 Envoy worker 线程被移入 kernel 的 runnable queue。Envoy worker 线程被唤醒，变成 runnable。操作系统发现可用 cpu 资源，把 runnable 的 envoy worker 线程调度上 cpu。（注意，runnable 和 调度上 cpu 不是一次完成的）</p></li>
+</ul>
+</li>
+<li><p>Envoy 分析事件列表，按事件列表的 fd 调度到不同的 FileEventImpl 类的回调函数（实现见：<code class="docutils literal notranslate"><span class="pre">FileEventImpl::assignEvents</span></code>）</p></li>
+<li><p>FileEventImpl 类的回调函数调用实际的业务回调函数，进行 syscall <code class="docutils literal notranslate"><span class="pre">accept</span></code>，完成 socket 连接。得到新 socket 的 FD: <code class="docutils literal notranslate"><span class="pre">$new_socket_fd</span></code>。</p></li>
+<li><p>业务回调函数把 调用 <code class="docutils literal notranslate"><span class="pre">epoll_ctl</span></code> 把 <code class="docutils literal notranslate"><span class="pre">$new_socket_fd</span> </code> 加到 epoll 监听中。</p></li>
+<li><p>回到步骤 1 。</p></li>
+</ol>
+<section id="tcp">
+<h2>TCP 连接建立步骤</h2>
+<p>先看看代码，了解大概的连接建立过程和相关的实现：</p>
+<figure class="full-width align-default" id="id2">
+<img alt="图：Listener TCP 连接建立流程" src="../../../_images/envoy-classes-accept-flow.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Listener TCP 连接建立流程</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fenvoy-classes-accept-flow.drawio.svg">用 Draw.io 打开</a></em></p>
+<p>步骤是：</p>
+<ol class="arabic simple">
+<li><p>epoll 收到连接请求，完成3次握手。最好回调到 TcpListenerImpl::onSocketEvent()。</p></li>
+<li><p>最终 syscall <code class="docutils literal notranslate"><span class="pre">accept()</span></code> 获得新 socket 的 FD。</p></li>
+<li><p>调用 ActiveTcpListener::onAccept()</p></li>
+<li><p>创建新连接专用的 <code class="docutils literal notranslate"><span class="pre">ListenerFilterChain</span></code></p></li>
+<li><p>创建新连接专用的 <code class="docutils literal notranslate"><span class="pre">ActiveTcpSocket</span></code>，发起 <code class="docutils literal notranslate"><span class="pre">ListenerFilterChain</span></code>  流程</p></li>
+<li><p>执行 <code class="docutils literal notranslate"><span class="pre">ListenerFilterChain</span></code>  流程：</p>
+<ol class="arabic simple">
+<li><p>如：TlsInspector::Filter 注册监听新 socket 的事件，以便在后续新 socket 发生事件时，读 socket，抽取出 TLS SNI/ALPN。</p></li>
+<li><p>当 <code class="docutils literal notranslate"><span class="pre">ListenerFilterChain</span></code> 中所有的 <code class="docutils literal notranslate"><span class="pre">ListenerFilter</span></code> 在新的事件和事件周期中完成其所有的数据交换和抽取的任务，本 fd 的控制权交到一环节。</p></li>
+</ol>
+</li>
+<li><p>调用 核心函数 <code class="docutils literal notranslate"><span class="pre">ActiveTcpListener::newConnection()</span></code></p></li>
+<li><p>调用 findFilterChain() 基于之前 <code class="docutils literal notranslate"><span class="pre">ListenerFilter</span></code> 抽取到的数据，和各 <code class="docutils literal notranslate"><span class="pre">network</span> <span class="pre">filter</span> <span class="pre">chain</span> <span class="pre">配置</span></code> 的 match 条件，找到最匹配的 <code class="docutils literal notranslate"><span class="pre">network</span> <span class="pre">filter</span> <span class="pre">chain</span> <span class="pre">配置</span></code> 。</p></li>
+<li><p>创建 <code class="docutils literal notranslate"><span class="pre">ServerConnection</span></code>(ConnectionImpl的子类) 对象</p>
+<ol class="arabic simple">
+<li><p>注册 socket 事件回调到 <code class="docutils literal notranslate"><span class="pre">Network::ConnectionImpl::onFileEvent(uint32_t</span> <span class="pre">events)</span></code> 中。即以后的 socket 事件将由这个<code class="docutils literal notranslate"><span class="pre">ServerConnection</span></code>处理。</p></li>
+</ol>
+</li>
+<li><p>用之前找到的 <code class="docutils literal notranslate"><span class="pre">network</span> <span class="pre">filter</span> <span class="pre">chain</span> <span class="pre">配置</span></code> 对象，创建 <code class="docutils literal notranslate"><span class="pre">transportSocket</span></code>。</p></li>
+<li><p>用之前找到的 <code class="docutils literal notranslate"><span class="pre">network</span> <span class="pre">filter</span> <span class="pre">chain</span> <span class="pre">配置</span></code> 对象，创建运行期的 <code class="docutils literal notranslate"><span class="pre">NetworkFilterChain</span></code>。</p></li>
+</ol>
+</section>
+<section id="id1">
+<h2>求证过程</h2>
+<p>如果有兴趣研究实现细节，建议看看我 Blog 的文章：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://blog.mygraphql.com/zh/posts/low-tec/trace/trace-istio/trace-istio-part3/">逆向工程与云原生现场分析 Part3 —— eBPF 跟踪 Istio/Envoy 事件驱动模型、连接建立、TLS 握手与 filter_chain 选择</a></p></li>
+</ul>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

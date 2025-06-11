@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>前言</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <p><img alt="Book Cover" src="_images/book-cover-mockup.jpg" /></p>
+<section id="id1">
+<h1>前言</h1>
+<section id="id2">
+<h2>本书概述</h2>
+<p>本书名为《Istio &amp; Envoy 内幕》，英文名《Istio &amp; Envoy Insider》。这是一本编写中的书，现在草稿阶段。</p>
+<section id="id3">
+<h3>本书是什么</h3>
+<p>本书内容包括：Envoy 源码分析、深入 Envoy 基本原理解构与分析 、 Istio 基本原理分析。但不是一本传统的《深入 xyz 源码》类型的书。甚至可以说，我尽了最大的努力少在书中直接贴源码。看源码是掌握实现细节必须的一步，但在书中浏览源码的体验一般非常糟糕，本书更多使用源码导航图来让读者了解实现的全流程，而非迷失于碎片式的源码片段细节当中而忘记全貌。</p>
+<p>本书中，我尝试以设计与实现角度，尽量系统地去思考：</p>
+<ul class="simple">
+<li><p>Envoy 的设计与实现细节</p></li>
+<li><p>Istio 为什么是现在的样子</p></li>
+<li><p>那些魔术配置背后的真相： Linux + Envoy</p>
+<ul>
+<li><p>流量是如何用 Linux 的 netfilter 技术，被拦截到 Envoy 的</p></li>
+<li><p>istiod 是如何编程 Envoy 去完成<code class="docutils literal notranslate"><span class="pre">服务网格</span></code>的流量策略的</p></li>
+</ul>
+</li>
+<li><p>Istio 将来可能是什么样子</p></li>
+</ul>
+<p>书里说的，只是在我研究与使用了 Istio 一段时间后，的思考与记录。我只是排查过一些 Istio/Envoy 相关的功能与性能问题，浏览和 Debug 过一些 Istio/Envoy 的代码。</p>
+<p>在研究 Istio 过程中。发现网上是有很多非常有价值的资讯。但是，要么主要是从使用者出发，没说实现机理；要么就是说了机理，也说得很好，但内容缺少系统化和连贯性。</p>
+</section>
+<section id="id4">
+<h3>本书不是什么</h3>
+<p>本书不是一本使用手册。更不是从使用者角度，教如何深入浅出学习 Istio。不会布道 Istio 有如何如何强大之功能，更不会教如何使用 Istio。这方面网上已经有太多非常优秀的书、文章、文档了。</p>
+<blockquote>
+<div><p>🤷 : <a class="reference external" href="https://en.wikipedia.org/wiki/Yet_another">Yet, another</a> Istio User Guide?<br />
+🙅 : No!</p>
+</div></blockquote>
+</section>
+<section id="id5">
+<h3>读者对象</h3>
+<p>本书主要讲 Istio/Envoy 的设计、实现机制。假设读者已经有一定的 Istio 使用经验。并有兴趣进一步研究其实现机理。</p>
+</section>
+<section id="id6">
+<h3>书的访问地址</h3>
+<ul class="simple">
+<li><p><a class="reference external" href="https://envoy-insider.mygraphql.com">https://envoy-insider.mygraphql.com</a></p></li>
+<li><p><a class="reference external" href="https://istio-insider.readthedocs.io">https://istio-insider.readthedocs.io</a></p></li>
+<li><p><a class="reference external" href="https://istio-insider.rtfd.io">https://istio-insider.rtfd.io</a></p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>关于作者</h3>
+<p>我叫 Mark Zhu，一个中年且头发少的程序员。我只是个入门级别的 Istio/Envoy contributor，暂时也是只提出过一些 github issue 和 文档方面的 Pull Request 。</p>
+<p>为什么水平有限还学人家写书？因为这句话：</p>
+<blockquote>
+<div><p>你不需要很厲害才能開始，但你需要開始才會很厲害。</p>
+</div></blockquote>
+<p>Blog: <a class="reference external" href="https://blog.mygraphql.com/">https://blog.mygraphql.com/</a><br />
+为方便读者关注 Blog 与本书的更新，开了个同步的 微信公众号：Mark的滿紙方糖言</p>
+<figure class="align-default" id="mark">
+<img alt="my-wechat-blog-qr.png" src="_images/my-wechat-blog-qr.png" />
+<figcaption>
+<p><span class="caption-text"><em>微信公众号: Mark的滿紙方糖言</em></span></p>
+</figcaption>
+</figure>
+</section>
+<section id="id8">
+<h3>参与编写</h3>
+<p>如果你也对编写本书有兴趣，欢迎联系我。本书的出发点不是刷简历，也没这个能力。而且，这样的非<code class="docutils literal notranslate"><span class="pre">短平快</span></code> 且 <code class="docutils literal notranslate"><span class="pre">TL;DR</span></code> 书籍注定是小众货。</p>
+<section id="issue">
+<h4>感谢提出 Issue 的同学 🌻</h4>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/tanjunchen">使众行者</a>：对阅读体验和排版提出很多非常好的意见。</p></li>
+</ul>
+</section>
+</section>
+<section id="dedication">
+<h3>Dedication 💞</h3>
+<p>First, to my dear parents, for showing me how to live a happy
+and productive life. To my dear wife and our amazing kid – thanks for all your love and patience.</p>
+</section>
+<section id="copyleft">
+<h3>Copyleft 声明</h3>
+<p>无论是文字还是图片，如果转载或修改，请注明原出处。</p>
+</section>
+<section id="id9">
+<h3>意见反馈</h3>
+<p>由于自称是开源交互图书，读者的反馈当然非常重要。如果你发现书中的错误，或者有更好的建议，不妨来这里提 Issue:<br />
+<a class="reference external" href="https://github.com/labilezhu/istio-insider/issues">https://github.com/labilezhu/istio-insider/issues</a></p>
+</section>
+</section>
+<section id="english-version">
+<h2>English version</h2>
+<p>There is an English version: <a class="reference external" href="https://envoy-insider.mygraphql.com/en/latest/">https://envoy-insider.mygraphql.com/en/latest/</a></p>
+<p><img alt="" src="_images/wechat-reward-qrcode.jpg" /></p>
+</section>
+</section>
+<section id="id10">
+<h1>目录</h1>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">目录</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ch0/index.xhtml">阅读互动图书</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ch0/index.xhtml#id2">互动图书</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ch0/index.xhtml#id3">语言风格</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ch0/index.xhtml#id4">画图风格</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ch1-istio-arch/index.xhtml">Istio 组件架构</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ch1-istio-arch/istio-arch-overview.xhtml">Istio 整体架构</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ch1-istio-arch/service-mesh-base-concept.xhtml">Service Mesh 的一些基础概念</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch1-istio-arch/service-mesh-base-concept.xhtml#id1">服务调用关系概念</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch1-istio-arch/service-mesh-base-concept.xhtml#upstream-downstream">Upstream &amp; Downstream</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch1-istio-arch/service-mesh-base-concept.xhtml#upstream-cluster-downstream-cluster">Upstream Cluster &amp; Downstream Cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch1-istio-arch/service-mesh-base-concept.xhtml#inbound-outbound">Inbound &amp; Outbound</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml">Istio 端口 与 组件</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#id2">监听端口</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#iptables">iptables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#id3">连接</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#id4">运维杂项</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#id5">抓包</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#sidecar">Sidecar 抓包</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#istio-gateway">Istio Gateway 抓包</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#id6">神奇的 127.0.0.6</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch1-istio-arch/istio-ports-components.xhtml#id7">一点感想</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch1-istio-arch/istio-data-panel-arch.xhtml">Istio 数据面架构</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch1-istio-arch/istio-data-panel-arch.xhtml#netfilter-iptables">netfilter/iptables</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ch2-envoy/index.xhtml">Envoy 内幕</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ch2-envoy/envoy-overview.xhtml">原生的可编程代理 Envoy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-overview.xhtml#id1">一点历史</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/envoy-overview.xhtml#c">为什么用 C++ 实现</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-overview.xhtml#envoy-proxy-l1">Envoy Proxy L1 架构</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch2-envoy/envoy-istio-conf-eg.xhtml">Istio 下 Envoy 配置举例</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-conf-eg.xhtml#id1">实验环境</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-conf-eg.xhtml#inbound">Inbound 数据流 “推断”</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/envoy-istio-conf-eg.xhtml#id3">用日志检查数据流</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-conf-eg.xhtml#outbound">Outbound 数据流 “推断”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-conf-eg.xhtml#bpftrace">用 bpftrace 检查数据流</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch2-envoy/envoy-high-level-flow/envoy-high-level-flow.xhtml">Envoy 抽象主流程与概念</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-high-level-flow/envoy-high-level-flow.xhtml#upstream-upstream">再说 upstream/upstream</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch2-envoy/arch/arch.xhtml">架构</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/oop/oop.xhtml">源码设计</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/oop/oop.xhtml#id2">设计模式与行话</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/oop/oop.xhtml#callback">Callback回调设计模式</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/oop/oop.xhtml#id3">子系统</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/event-driven/event-driven.xhtml">事件驱动</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/event-driven/event-driven.xhtml#http">HTTP 反向代理的总流程</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/event-driven/event-driven.xhtml#downstream-tcp">Downstream TCP 连接建立</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/event-driven/event-driven.xhtml#id2">事件处理抽象框架</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/event-driven/event-driven.xhtml#libevent">libevent 核心思想</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/event-driven/libevent.xhtml">libevent 核心思想</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/event-driven/event-driven.xhtml#id3">扩展阅读</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/thread-model/thread-model.xhtml">线程模型</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/thread-model/thread-model.xhtml#id2">线程概述</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/thread-model/thread-model.xhtml#thread-local">Thread Local</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/thread-model/thread-model.xhtml#ref">Ref</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/listener/listener.xhtml">Listener</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/listener/listener.xhtml#id1">Listener 举例</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/listener/listener.xhtml#id2">Listener 内部组件</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/listener/listener.xhtml#listener-filters">Listener filters</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/listener/listener.xhtml#network-filter-chains">Network Filter Chains</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/listener/listener.xhtml#id4">Listener 相关的组件和启动顺序</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/listener/listener.xhtml#id6">代码级的启动顺序</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/listener/listener.xhtml#id7">求证过程</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/listener/listener-connection.xhtml">Listener 连接建立细节</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/network-filter/network-filter.xhtml">Network Filter</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/network-filter/network-filter.xhtml#network-filter-chains">Network Filter Chains</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/network-filter/network-filter.xhtml#id1">Network Filter 概述</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/network-filter/network-filter.xhtml#id2">Network Filter 框架设计概念</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/network-filter/network-filter.xhtml#id3">Network Filter 对象关系</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/network-filter/network-filter.xhtml#id5">Network Filter 框架设计细说</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/network-filter/network-filter.xhtml#id8">扩展阅读</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/http/http-connection-manager/http-connection-manager.xhtml">http connection manager</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/http/http-connection-manager/http-connection-manager.xhtml#http-filter">http filter 抽象对象定义</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/http/http-connection-manager/http-connection-manager.xhtml#http-filter-c">http filter C++类关系</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/http/http-connection-manager/hcm-event-process.xhtml">HCM upstream/downstream 事件驱动协作下的 HTTP 反向代理流程</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/http/router/router.xhtml">Router</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/http/router/router.xhtml#id2">扩展阅读</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/stream/http1.1-stream.xhtml">HTTP/1.1 Stream(草稿)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml">流控 - Flow Control</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml#id1">一些流控相关的术语</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml#tcp">TCP 流控实现</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml#http2">HTTP2 流控实现</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml#id2">HTTP2 流控总体流程</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml#http-decode-encode-filter">HTTP decode/encode filter 流控实现细节</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml#http-and-http-2-codec-upstream-send-buffer">HTTP and HTTP/2 codec upstream send buffer</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml#http-and-http-2-network-upstream-network-buffer">HTTP and HTTP/2 network upstream network buffer</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/arch/flow-control/flow-control.xhtml#ref">Ref.</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.xhtml">Envoy 请求与响应调度</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id1">请求与响应调度</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id2">相关组件</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id3">相关的监控指标</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id4">Envoy 请求调度流程</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id7">请求与响应调度时序线</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id9">总结</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.xhtml#id10">一些有趣的扩展阅读</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml">HTTP 连接生命周期管理</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml#upstream-downstream">Upstream/Downstream 连接解藕</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml#id1">连接超时相关配置参数</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml#idle-timeout">idle_timeout</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml#max-connection-duration">max_connection_duration</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml#max-requests-per-connection">max_requests_per_connection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml#drain-timeout-for-downstream-only">drain_timeout - for downstream only</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml#delayed-close-timeout-for-downstream-only">delayed_close_timeout - for downstream only</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/connection-life/connection-life.xhtml#envoy">Envoy 连接关闭后的竞态条件</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/connection-life/connection-life-race.xhtml">Envoy 连接关闭后的竞态条件</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/connection-life/connection-life-race.xhtml#envoy-downstream-upstream">Envoy 与 Downstream/Upstream 连接状态不同步</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/index.xhtml">Istio 与 Envoy 指标</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-istio-metrics-overview.xhtml">Istio 与 Envoy 指标概述</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/metrics-req-resp-flow-timeline.xhtml">Envoy 请求与响应时序线上的指标</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml">Envoy 指标</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#id1">Envoy 指标概述</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#tag">Tag</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#id2">指标数据类型</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#id3">指标释义</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#cluster-manager">cluster manager</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#http-connection-manager-hcm">http connection manager(HCM)</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#listeners">listeners</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#server">server</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#watch-dog">watch dog</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#event-loop">Event loop</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#id4">配置说明</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#config-bootstrap-v3-bootstrap">config.bootstrap.v3.Bootstrap</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#config-metrics-v3-statsconfig">config.metrics.v3.StatsConfig</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat.xhtml#config-metrics-v3-statsmatcher">config.metrics.v3.StatsMatcher</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml">Istio 指标</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml#istio-metrics">Istio 自己的 Metrics</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml#id1">标准指标说明</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml#id2">使用</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml#id5">工作原理</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml#envoy-metrics">Envoy 内置的 Metrics</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml#id6">定制 Envoy 内置的 Metrics</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml#id7">原理</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/istio-stat.xhtml#istio-proxy">总结：Istio-Proxy 指标地图</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/envoy-istio-metrics/envoy-stat-impl.xhtml">Envoy 指标的实现(草稿)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ch2-envoy/upstream/upstream.xhtml">Upstream</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/upstream/connection-pooling/connection-pooling.xhtml">连接池</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/upstream/connection-pooling/connection-pooling.xhtml#tcp-proxy">TCP Proxy 连接池</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/upstream/connection-pooling/connection-pooling.xhtml#id2">TCP Proxy 连接池概述</a></li>
+<li class="toctree-l5"><a class="reference internal" href="ch2-envoy/upstream/connection-pooling/connection-pooling.xhtml#id3">TCP Proxy 连接池详述</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/upstream/connection-pooling/connection-pooling.xhtml#http">HTTP 连接池</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ch2-envoy/upstream/circuit-breaking/circuit-breaking.xhtml">Circuit Breaking(草稿)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ch2-envoy/upstream/circuit-breaking/circuit-breaking.xhtml#id1">参考</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ch4-istio-data-plane/index.xhtml">Istio Data Plane</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ch4-istio-data-plane/data-plane-tunnel/alpn-http-meta-exchange/alpn-http-meta-exchange.xhtml">基于 ALPN/TLS 握手的 HTTP 元信息交换</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ch4-istio-data-plane/data-plane-tunnel/alpn-http-meta-exchange/alpn-http-meta-exchange.xhtml#id1">术语</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch4-istio-data-plane/data-plane-tunnel/alpn-http-meta-exchange/alpn-http-meta-exchange.xhtml#outbound-istio-proxy-inbound-istio-proxy">outbound istio-proxy 与 inbound istio-proxy 的协作</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ch4-istio-data-plane/data-plane-tunnel/alpn-http-meta-exchange/alpn-http-meta-exchange.xhtml#id2">扩展阅读</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="performance/performance.xhtml">Istio/Envoy 性能</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="performance/performance.xhtml#id1">我的一些文章</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance/performance.xhtml#id2">影响性能的因素 - 设计容量</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance/performance.xhtml#benchmark">Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance/performance.xhtml#analyzing-istio-performance">Analyzing Istio Performance</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="disruptions/disruptions.xhtml">Disruptions - 异常处理</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="disruptions/worker-node-disruptions/worker-node-disruptions.xhtml">worker node disruptions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="observability/observability.xhtml">Observability - 可观察性</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="observability/observability.xhtml#ref">Ref</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting/troubleshooting.xhtml">Troubleshooting - 问题排查</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting/tls-traffic/decrypt-dump-tls-traffic.xhtml">Decrypt and Dump TLS Traffic - 解密与监听 TLS 流量</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/tls-traffic/decrypt-dump-tls-traffic.xhtml#tls-key-log-feature">TLS key log feature</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/tls-traffic/decrypt-dump-tls-traffic.xhtml#envoy-key-log">Envoy Key Log 配置</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="troubleshooting/tls-traffic/decrypt-dump-tls-traffic.xhtml#extensions-transport-sockets-tls-v3-tlskeylog">extensions.transport_sockets.tls.v3.TlsKeyLog</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/tls-traffic/decrypt-dump-tls-traffic.xhtml#decryption-tools">Decryption Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/tls-traffic/decrypt-dump-tls-traffic.xhtml#key-log-format">Key Log Format</a></li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/tls-traffic/decrypt-dump-tls-traffic.xhtml#ref">Ref</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml">TCP Proxy half-closed connection leak for 1 hour in some scenarios</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#base-knowledge">Base knowledge</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#conntrack-base-knowledge">Conntrack base knowledge</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#tcp">TCP</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#conntrack-table">Conntrack table</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#environment">Environment</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#testing-pod">Testing POD</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#tcp-service-pod">TCP service pod</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#enable-conntrack-s-invalid-packet-log-on-testing-pod">enable conntrack’s invalid packet log on Testing POD</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#skills">skills</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#nsenter-network-namespace">nsenter network namespace</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#socket-leak-occupy-on-fin-wait2">socket leak &amp; occupy on FIN_WAIT2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#tcpproxy-connections-established">1. TCPProxy: connections ESTABLISHED</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#tcpproxy-upstream-service-active-close-connection">2. TCPProxy: upstream service active close connection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#after-60s-conntrack-table-close-wait-entry-timeout">3. after 60s, conntrack table CLOSE_WAIT entry timeout</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/tcpproxy-half-close-connection-leak/tcpproxy-half-close-connection-leak.xhtml#app-close-connection-fin-not-reach-peer">4. app close connection - FIN not reach peer</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml">App outbound connecting timed out because App selected a ephemeral port which collisions with the existing socket on 15001(outbound) listener</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#base-knowledge">Base knowledge</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#tcp">TCP</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#tcp-challenge-ack">TCP Challenge ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#conntrack-table">Conntrack table</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#environment">Environment</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#testing-pod">Testing POD</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#tcp-service-pod">TCP service pod</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#enable-conntrack-s-invalid-packet-log-on-testing-pod">enable conntrack’s invalid packet log on Testing POD</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#new-connection-timeout">New connection timeout</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#app-build-connection-on-the-same-ephemeral-port">App build connection on the same ephemeral port</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#case-1-connect-timed-out-by-collision-ephemeral-port">Case 1: connect timed out by collision ephemeral port</a></li>
+<li class="toctree-l5"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#case-2-connect-by-collision-ephemeral-port-but-seq-no-happens-to-be-in-the-tcp-window-of-the-old-connection">Case 2: connect by collision ephemeral port but seq-no happens to be in the TCP window of the old connection</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/sidecar-outbound-local-port-collisions/sidecar-outbound-local-port-collisions.xhtml#skills">Skills</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml">因配置 Envoy 保留 HTTP/1 header 大小写，在混合 HTTP1 和 HTTP2 的 Istio 网格上意外禁用了 HTTP/2</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id1">动机</a></li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id2">症状</a></li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id3">术语</a></li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id4">背景知识</a></li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id5">调查</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#outbound-istio-proxy-debug-log">outbound istio-proxy 的 debug log</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#evnoy-listener">Evnoy Listener</a></li>
+<li class="toctree-l4"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#envoy-upstream-cluster-meta-data">Envoy upstream cluster 的 meta-data</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id6">问题根源</a></li>
+<li class="toctree-l3"><a class="reference internal" href="troubleshooting/istio-troubleshooting/http_protocol_options-accidentally-disable-http2/http_protocol_options-accidentally-disable-http2.xhtml#id7">结语</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dev-istio/dev-istio.xhtml">Istio 开发</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dev-istio/dev-istio-control-plane.xhtml">Istio Control Plane Development</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dev-istio/debug-istiod.xhtml">Debug Istiod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dev-istio/how-to-dev-links.xhtml">Istio 开发入门参考列表</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/how-to-dev-links.xhtml#id1">代码说明</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/how-to-dev-links.xhtml#id2">设计文档</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/how-to-dev-links.xhtml#id3">开发环境</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/how-to-dev-links.xhtml#id4">Istio 项目健康监控</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/how-to-dev-links.xhtml#id5">论坛</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/how-to-dev-links.xhtml#id6">参与开发 Istio</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/how-to-dev-links.xhtml#id7">工作组</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="dev-istio/dev-istio-data-plane.xhtml">Istio Data Plane Development</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml">调试 Istio 网格中运行的 Envoy sidecar C++ 代码</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#id1">介绍</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#id2">我的动机</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#id3">环境架构</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#id4">环境说明</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#id5">环境搭建步骤</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#debug-istio-proxy">1. 构建带 debug 信息的 istio-proxy</a></li>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#pod">2. 安装测试目标 pod</a></li>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#attach-debuger-istio-proxy">3. attach debuger 到 istio-proxy</a></li>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#id8">4. 开始调试</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#faq">FAQ</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#containerd-allow-pull-image-from-plain-http-docker-image-registry"><code class="docutils literal notranslate"><span class="pre">containerd</span></code> allow pull image from plain http docker image registry</a></li>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#path">动态 path</a></li>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#lldb-gdb">为何用 <code class="docutils literal notranslate"><span class="pre">lldb</span></code> 而不是 <code class="docutils literal notranslate"><span class="pre">gdb</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy.xhtml#cloud-native">更 Cloud Native 的远程调试的方法</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml">调试与观察 istio-proxy Envoy sidecar 的启动过程</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml#debug">debug 初始化之难</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml#envoy-attach">Envoy 的启动 attach 方法</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml#inject-istio-proxy-container">手工 inject 的 istio-proxy container</a></li>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml#id3">常用断点</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml#id4">附录 - 写给自己的一些备忘</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml#istio-auto-inject-sidecar-container">Istio auto inject 的 sidecar container  (我没有使用这种方法)</a></li>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml#id5">流量 debug</a></li>
+<li class="toctree-l5"><a class="reference internal" href="dev-istio/dev-istio-proxy/debug-istio-proxy/debug-istio-proxy-start.xhtml#lldb">lldb 常用命令单</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="id11">
+<h1>附录</h1>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">附录</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="appendix-lab-env/index.xhtml">实验环境总述</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="appendix-lab-env/index.xhtml#id2">基础环境安装</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="appendix-lab-env/index.xhtml#namespace">默认 namespace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="appendix-lab-env/index.xhtml#istio">安装 istio</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="appendix-lab-env/index.xhtml#id3">安装工具服务</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="appendix-lab-env/index.xhtml#netshoot">netshoot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="appendix-lab-env/index.xhtml#httpbin">httpbin</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="appendix-lab-env/index.xhtml#shell">配置 Shell 环境</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="appendix-lab-env/index.xhtml#istio-gateway-node-port">istio gateway &amp; node port</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="appendix-lab-env/index.xhtml#id4">实验环境列表</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="appendix-lab-env/appendix-lab-env-base.xhtml">简单分层实验环境</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="appendix-lab-env/appendix-lab-env-base.xhtml#id3">安装过程</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="appendix-lab-env/appendix-lab-env-base.xhtml#fortio">fortio</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

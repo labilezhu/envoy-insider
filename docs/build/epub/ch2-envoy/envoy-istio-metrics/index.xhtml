@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Istio 与 Envoy 指标</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="istio-envoy">
+<h1>Istio 与 Envoy 指标</h1>
+<p>指标监控，可能是 DevOps 监控最重要的一环。但同时也可能是最难的一环。你可以从网上找到各种系统和中间件的 Grafana 监控仪表盘，它们大都设计得很漂亮得体，让人感觉监控已经完美无缺。</p>
+<p>但是，不知道你是否与我有同样的经历：在系统遇到问题时，手头有一大堆指标和监控仪表盘。</p>
+<ul class="simple">
+<li><p>却不知道哪个指标才是问题相关的。</p></li>
+<li><p>或者是，问题已经有个方向定位，却发现这个方向上，根本没有记录指标。</p></li>
+</ul>
+<p>事情终究是要人来解决，再多的数据，如果：</p>
+<ul class="simple">
+<li><p>不去理解这些数据背后的意义</p></li>
+<li><p>不去主动分析自己的应用场景和部署环境需要什么数据，只是系统默认给什么就用什么</p></li>
+</ul>
+<p>那么指标越多，越让人迷失在茫茫指标的海洋中。</p>
+<p>作为一个混后端江湖多年的老程（老程序员），总有很多东西不懂，却难以启齿的。其中一个就是一些具体指标的意义。举个两个例子：</p>
+<ol class="arabic simple">
+<li><p>我之前定位一个 Linux 下的网络问题，用了一个叫 <code class="docutils literal notranslate"><span class="pre">nstat</span></code> 的工具，它输出了非常多的指标，但很多会发现，有些指标是死活找不到说明文档的。这也是开源软件一直以来的问题，变化快，文档跟不上，甚至错误或过时未更新。</p></li>
+<li><p>我之前定位一个 Linux 下的 TCP 连接问题，用了一个叫 <code class="docutils literal notranslate"><span class="pre">ss</span></code> 的工具，它输出的神指标，也是搜索引擎也无能为力去解释。最后不得不看原码。还好，我把调查结果记录到 Blog 中：<a class="reference external" href="https://blog.mygraphql.com/zh/notes/low-tec/network/tcp-inspect/">《可能是最完整的 TCP 连接健康指标工具 ss 的说明》</a>，希望对后来人有一些参考作用吧。</p></li>
+</ol>
+<p>故事说完了，回到本书的主角 Istio 与 Envoy 上。它们的指标说明文档比上面的老爷车开源软件好一些。起码基本每个指标都有一行文字说明，虽然文字一样非常短且模糊。</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="envoy-istio-metrics-overview.xhtml">Istio 与 Envoy 指标概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics-req-resp-flow-timeline.xhtml">Envoy 请求与响应时序线上的指标</a></li>
+<li class="toctree-l1"><a class="reference internal" href="envoy-stat.xhtml">Envoy 指标</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="envoy-stat.xhtml#id1">Envoy 指标概述</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#tag">Tag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#id2">指标数据类型</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-stat.xhtml#id3">指标释义</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#cluster-manager">cluster manager</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#http-connection-manager-hcm">http connection manager(HCM)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#listeners">listeners</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#server">server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#watch-dog">watch dog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#event-loop">Event loop</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envoy-stat.xhtml#id4">配置说明</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#config-bootstrap-v3-bootstrap">config.bootstrap.v3.Bootstrap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#config-metrics-v3-statsconfig">config.metrics.v3.StatsConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envoy-stat.xhtml#config-metrics-v3-statsmatcher">config.metrics.v3.StatsMatcher</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="istio-stat.xhtml">Istio 指标</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="istio-stat.xhtml#istio-metrics">Istio 自己的 Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-stat.xhtml#id1">标准指标说明</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-stat.xhtml#id2">使用</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-stat.xhtml#id5">工作原理</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="istio-stat.xhtml#envoy-metrics">Envoy 内置的 Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="istio-stat.xhtml#id6">定制 Envoy 内置的 Metrics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="istio-stat.xhtml#id7">原理</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="istio-stat.xhtml#istio-proxy">总结：Istio-Proxy 指标地图</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="envoy-stat-impl.xhtml">Envoy 指标的实现(草稿)</a></li>
+</ul>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

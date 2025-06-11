@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Istio 下 Envoy 配置举例</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="istio-envoy">
+<h1>Istio 下 Envoy 配置举例</h1>
+<p>大部分书籍和文档，都是按架构分层，自上而下(Top down) ，从概念、高层设计、基本原理、抽象流程去说明一个软件架构的。这个套路很学院派，也是非常稳重踏实的选择。但本节不采用这种方式。本节先举例分析一个具体场景下的现场分析。从具体和整体上，先让读者对设计有个感性的理解。再去分析为何要这样 “配置”，背后的抽象概念和基本原理。这样，可以让学习的人保持兴趣，也比较合符人类自然的，从具体中提炼出抽象的学习习惯。毕竟，笔者是个念过师范专业的人，虽然连个 “教师资格证” 也没拿到。</p>
+<p>要理解 Istio 数据面基理，首先要看懂 sidecar proxy - Envoy 的配置。本节用一个例子，看看 istiod 写了什么 “代码” 去控制这个 “可编程代理” —— Envoy 。</p>
+<section id="id1">
+<h2>实验环境</h2>
+<p>本节的实验环境说明见于： <a class="reference internal" href="../appendix-lab-env/appendix-lab-env-base.xhtml#id1"><span class="std std-ref">简单分层实验环境</span></a>。</p>
+<p>架构图：</p>
+<figure class="align-default" id="id2">
+<img alt="Inbound与Outbound概念" src="../_images/istio-data-panel-arch.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图:Istio 里的 Envoy 配置 - 部署</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fistio-data-panel-arch.drawio.svg">用 Draw.io 打开</a></em></p>
+<p>首先看看 Envoy 的配置：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>fortio-server<span class="w"> </span>-c<span class="w"> </span>istio-proxy<span class="w">  </span>--<span class="w"> </span><span class="se">\</span>
+curl<span class="w"> </span><span class="s1">&#39;localhost:15000/config_dump?include_eds&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+yq<span class="w"> </span><span class="nb">eval</span><span class="w"> </span>-P<span class="w"> </span>&gt;<span class="w"> </span>envoy@istio-conf-eg-inbound.envoy_conf.yaml
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">注解</p>
+<p>这里下载 <code class="xref download docutils literal notranslate"><span class="pre">envoy&#64;istio-conf-eg-inbound.envoy_conf.yaml</span></code> .</p>
+</div>
+<p>下面先不展开说明配置文件，直接看分析过程，最后，会回归到这个配置中。</p>
+</section>
+<section id="inbound">
+<h2>Inbound 数据流 “推断”</h2>
+<p>分析上面获取到的 Envoy 配置，可以 “推断” 到下面 Inbound 数据流图：</p>
+<figure class="full-width align-default" id="istio-envoy-inbound">
+<img alt="图：Istio里的 Envoy Inbound 配置举例" src="../_images/envoy%40istio-conf-eg-inbound.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Istio里的 Envoy Inbound 配置举例</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fenvoy&#64;istio-conf-eg-inbound.drawio.svg">用 Draw.io 打开</a></em></p>
+<p>喜欢较真的程序员，对 “推断” 的事情有天然的不安感。那么，我们想法子 debug 一下，验证上图的可靠性。</p>
+<section id="id3">
+<h3>用日志检查数据流</h3>
+<ol class="arabic simple">
+<li><p>开始前，先看看环境细节：</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>labile@labile-T30<span class="w"> </span>➜<span class="w"> </span>labile<span class="w"> </span>$<span class="w"> </span>k<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>netshoot<span class="w"> </span>-owide
+NAME<span class="w">       </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE<span class="w">   </span>IP<span class="w">               </span>NODE<span class="w">        </span>NOMINATED<span class="w"> </span>NODE<span class="w">   </span>READINESS<span class="w"> </span>GATES
+netshoot<span class="w">   </span><span class="m">2</span>/2<span class="w">     </span>Running<span class="w">   </span><span class="m">11</span><span class="w">         </span>8d<span class="w">    </span><span class="m">172</span>.21.206.228<span class="w">   </span>worknode5<span class="w">   </span>&lt;none&gt;<span class="w">           </span>&lt;none&gt;
+
+
+labile@labile-T30<span class="w"> </span>➜<span class="w"> </span>labile<span class="w"> </span>$<span class="w"> </span>k<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>fortio-server<span class="w"> </span>-owide
+NAME<span class="w">            </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE<span class="w">   </span>IP<span class="w">               </span>NODE<span class="w">        </span>NOMINATED<span class="w"> </span>NODE<span class="w">   </span>READINESS<span class="w"> </span>GATES
+fortio-server<span class="w">   </span><span class="m">2</span>/2<span class="w">     </span>Running<span class="w">   </span><span class="m">11</span><span class="w">         </span>8d<span class="w">    </span><span class="m">172</span>.21.206.230<span class="w">   </span>worknode5<span class="w">   </span>&lt;none&gt;<span class="w">           </span>&lt;none&gt;
+
+
+labile@labile-T30<span class="w"> </span>➜<span class="w"> </span>labile<span class="w"> </span>$<span class="w"> </span>k<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>fortio-server<span class="w">      </span>
+NAME<span class="w">            </span>TYPE<span class="w">       </span>CLUSTER-IP<span class="w">      </span>EXTERNAL-IP<span class="w">   </span>PORT<span class="o">(</span>S<span class="o">)</span><span class="w">                                        </span>AGE
+fortio-server<span class="w">   </span>NodePort<span class="w">   </span><span class="m">10</span>.96.215.136<span class="w">   </span>&lt;none&gt;<span class="w">        </span><span class="m">8080</span>:32463/TCP,8070:32265/TCP,8079:30167/TCP<span class="w">   </span>8d
+
+
+labile@labile-T30<span class="w"> </span>➜<span class="w"> </span>labile<span class="w"> </span>$<span class="w"> </span>k<span class="w"> </span>get<span class="w"> </span>endpoints<span class="w"> </span>fortio-server<span class="w"> </span>
+NAME<span class="w">            </span>ENDPOINTS<span class="w">                                                     </span>AGE
+fortio-server<span class="w">   </span><span class="m">172</span>.21.206.230:8079,172.21.206.230:8070,172.21.206.230:8080<span class="w">   </span>8d
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>开一个专用 <code class="docutils literal notranslate"><span class="pre">监控日志终端窗口</span></code>，：</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>k<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>fortio-server<span class="w"> </span>-c<span class="w"> </span>istio-proxy
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>看看客户端(netshoot) 到 fortio-server 的连接情况。发现未有连接，即到 fortio-server 的连接池未初始化。</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ k exec -it netshoot -- ss -tr
+
+State Recv-Q Send-Q Local Address:Port                           Peer Address:Port Process
+ESTAB 0      0          localhost:52012                             localhost:15020       
+ESTAB 0      0          localhost:51978                             localhost:15020       
+ESTAB 0      0           netshoot:53522 istiod.istio-system.svc.cluster.local:15012       
+ESTAB 0      0           netshoot:42974 istiod.istio-system.svc.cluster.local:15012       
+ESTAB 0      0          localhost:15020                             localhost:52012       
+ESTAB 0      0          localhost:15020                             localhost:51978       
+</pre></div>
+</div>
+<p>解释一下上面的命令。<code class="docutils literal notranslate"><span class="pre">-t</span></code> 是只看 tcp 连接。<code class="docutils literal notranslate"><span class="pre">-r</span></code> 是尝试对 ip 地址反向解释回域名。</p>
+<div class="admonition tip">
+<p class="admonition-title">小技巧</p>
+<p>如果你的环境中发现已经有连接，那么，强制断开它。因为后面要分析一下建立新连接的日志。这里有个 强制断开连接的 <code class="docutils literal notranslate"><span class="pre">ss</span></code> 命令的秘技：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>k<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>netshoot<span class="w"> </span>--<span class="w"> </span>ss<span class="w"> </span>-K<span class="w"> </span><span class="s1">&#39;dst 172-21-206-230.fortio-server.mark.svc.cluster.local&#39;</span>
+</pre></div>
+</div>
+<p>其中 <code class="docutils literal notranslate"><span class="pre">dst</span> <span class="pre">172-21-206-230.fortio-server.mark.svc.cluster.local</span></code> 是个过滤器条件，用于指定执行断开的连接。命令的意思是断开<code class="docutils literal notranslate"><span class="pre">对端目标地址</span></code>为 <code class="docutils literal notranslate"><span class="pre">172-21-206-230.fortio-server.mark.svc.cluster.local</span></code> 的连接。<code class="docutils literal notranslate"><span class="pre">172-21-206-230.fortio-server.mark.svc.cluster.local</span></code>就是 k8s 自动给这个 fortio-server POD 的域名了。</p>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>修改日志级别：</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>k<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>fortio-server<span class="w"> </span>-c<span class="w"> </span>istio-proxy<span class="w"> </span>--<span class="w"> </span>curl<span class="w"> </span>-XPOST<span class="w"> </span>http://localhost:15000/logging
+k<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>fortio-server<span class="w"> </span>-c<span class="w"> </span>istio-proxy<span class="w"> </span>--<span class="w"> </span>curl<span class="w"> </span>-XPOST<span class="w"> </span>curl<span class="w"> </span>-XPOST<span class="w"> </span><span class="s1">&#39;http://localhost:15000/logging?level=debug&#39;</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>在 k8s cluster 内发起请求：</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sleep<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>k<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>netshoot<span class="w"> </span>--<span class="w"> </span>curl<span class="w"> </span>-v<span class="w"> </span>http://fortio-server:8080/
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>查看连接</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>k<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>netshoot<span class="w"> </span>--<span class="w"> </span>ss<span class="w"> </span>-trn<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>fortio
+
+State<span class="w">  </span>Recv-Q<span class="w">  </span>Send-Q<span class="w">     </span>Local<span class="w"> </span>Address:Port<span class="w">                                             </span>Peer<span class="w"> </span>Address:Port<span class="w">   </span>Process<span class="w">  </span>
+...
+ESTAB<span class="w">  </span><span class="m">0</span><span class="w">       </span><span class="m">0</span><span class="w">               </span>netshoot:52352<span class="w">     </span><span class="m">172</span>-21-206-230.fortio-server.mark.svc.cluster.local:8080<span class="w">            </span>
+...
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li><p>查看日志
+这时，在之前打开的 <code class="docutils literal notranslate"><span class="pre">监控日志终端窗口</span></code> 中，应该可以看到日志：</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">envoy</span> <span class="nb">filter</span>	<span class="n">original_dst</span><span class="p">:</span> <span class="n">new</span> <span class="n">connection</span> <span class="n">accepted</span>
+<span class="n">envoy</span> <span class="nb">filter</span>	<span class="n">tls</span> <span class="n">inspector</span><span class="p">:</span> <span class="n">new</span> <span class="n">connection</span> <span class="n">accepted</span>
+<span class="n">envoy</span> <span class="nb">filter</span>	<span class="n">tls</span><span class="p">:</span><span class="n">onServerName</span><span class="p">(),</span> <span class="n">requestedServerName</span><span class="p">:</span> <span class="n">outbound_</span><span class="mf">.8080</span><span class="n">_</span><span class="o">.</span><span class="n">_</span><span class="o">.</span><span class="n">fortio</span><span class="o">-</span><span class="n">server</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">svc</span><span class="o">.</span><span class="n">cluster</span><span class="o">.</span><span class="n">local</span>
+<span class="n">envoy</span> <span class="n">conn_handler</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">]</span> <span class="n">new</span> <span class="n">connection</span> <span class="kn">from</span> <span class="mf">172.21.206.228</span><span class="p">:</span><span class="mi">52352</span>
+
+<span class="n">envoy</span> <span class="n">http</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">]</span> <span class="n">new</span> <span class="n">stream</span>
+<span class="n">envoy</span> <span class="n">http</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">][</span><span class="n">S11192089021443921902</span><span class="p">]</span> <span class="n">request</span> <span class="n">headers</span> <span class="n">complete</span> <span class="p">(</span><span class="n">end_stream</span><span class="o">=</span><span class="n">true</span><span class="p">):</span>
+<span class="s1">&#39;:authority&#39;</span><span class="p">,</span> <span class="s1">&#39;fortio-server:8080&#39;</span>
+<span class="s1">&#39;:path&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span>
+<span class="s1">&#39;:method&#39;</span><span class="p">,</span> <span class="s1">&#39;GET&#39;</span>
+<span class="s1">&#39;user-agent&#39;</span><span class="p">,</span> <span class="s1">&#39;curl/7.83.1&#39;</span>
+<span class="s1">&#39;accept&#39;</span><span class="p">,</span> <span class="s1">&#39;*/*&#39;</span>
+<span class="s1">&#39;x-forwarded-proto&#39;</span><span class="p">,</span> <span class="s1">&#39;http&#39;</span>
+<span class="s1">&#39;x-request-id&#39;</span><span class="p">,</span> <span class="s1">&#39;437a5a3e-f057-4079-a959-dad3d7dcf6a6&#39;</span>
+<span class="s1">&#39;x-envoy-decorator-operation&#39;</span><span class="p">,</span> <span class="s1">&#39;fortio-server.mark.svc.cluster.local:8080/*&#39;</span>
+<span class="s1">&#39;x-envoy-peer-metadata&#39;</span><span class="p">,</span> <span class="s1">&#39;ChwKDkFQUF9DT05UQUlORVJTEgoaCG5ldHNob290ChoKCkNMVVNURVJfSUQSDBoKS3ViZXJuZXRlcwogCgxJTlNUQU5DRV9JUFMSEBoOMTcyLjIxLjIwNi4yMjgKGQoNSVNUSU9fVkVSU0lPThIIGgYxLjE0LjMKlAEKBkxBQkVMUxKJASqGAQokChlzZWN1cml0eS5pc3Rpby5pby90bHNNb2RlEgcaBWlzdGlvCi0KH3NlcnZpY2UuaXN0aW8uaW8vY2Fub25pY2FsLW5hbWUSChoIbmV0c2hvb3QKLwojc2VydmljZS5pc3Rpby5pby9jYW5vbmljYWwtcmV2aXNpb24SCBoGbGF0ZXN0ChoKB01FU0hfSUQSDxoNY2x1c3Rlci5sb2NhbAoSCgROQU1FEgoaCG5ldHNob290ChMKCU5BTUVTUEFDRRIGGgRtYXJrCj0KBU9XTkVSEjQaMmt1YmVybmV0ZXM6Ly9hcGlzL3YxL25hbWVzcGFjZXMvbWFyay9wb2RzL25ldHNob290ChcKEVBMQVRGT1JNX01FVEFEQVRBEgIqAAobCg1XT1JLTE9BRF9OQU1FEgoaCG5ldHNob290&#39;</span>
+<span class="s1">&#39;x-envoy-peer-metadata-id&#39;</span><span class="p">,</span> <span class="s1">&#39;sidecar~172.21.206.228~netshoot.mark~mark.svc.cluster.local&#39;</span>
+
+<span class="s1">&#39;x-envoy-attempt-count&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span>
+<span class="s1">&#39;x-b3-traceid&#39;</span><span class="p">,</span> <span class="s1">&#39;03824b6065cd13e0559df95ebf18def7&#39;</span>
+<span class="s1">&#39;x-b3-spanid&#39;</span><span class="p">,</span> <span class="s1">&#39;559df95ebf18def7&#39;</span>
+<span class="s1">&#39;x-b3-sampled&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span>
+
+
+<span class="n">envoy</span> <span class="n">http</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">][</span><span class="n">S11192089021443921902</span><span class="p">]</span> <span class="n">request</span> <span class="n">end</span> <span class="n">stream</span>
+<span class="n">envoy</span> <span class="n">connection</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">]</span> <span class="n">current</span> <span class="n">connecting</span> <span class="n">state</span><span class="p">:</span> <span class="n">false</span>
+<span class="n">envoy</span> <span class="n">router</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">][</span><span class="n">S11192089021443921902</span><span class="p">]</span> <span class="n">cluster</span> <span class="s1">&#39;inbound|8080||&#39;</span> <span class="n">match</span> <span class="k">for</span> <span class="n">URL</span> <span class="s1">&#39;/&#39;</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">transport</span> <span class="n">socket</span> <span class="n">match</span><span class="p">,</span> <span class="n">socket</span> <span class="n">default</span> <span class="n">selected</span> <span class="k">for</span> <span class="n">host</span> <span class="k">with</span> <span class="n">address</span> <span class="mf">172.21.206.230</span><span class="p">:</span><span class="mi">8080</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">Created</span> <span class="n">host</span> <span class="mf">172.21.206.230</span><span class="p">:</span><span class="mf">8080.</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">addHost</span><span class="p">()</span> <span class="n">adding</span> <span class="mf">172.21.206.230</span><span class="p">:</span><span class="mi">8080</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">membership</span> <span class="n">update</span> <span class="k">for</span> <span class="n">TLS</span> <span class="n">cluster</span> <span class="n">inbound</span><span class="o">|</span><span class="mi">8080</span><span class="o">||</span> <span class="n">added</span> <span class="mi">1</span> <span class="n">removed</span> <span class="mi">0</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">re</span><span class="o">-</span><span class="n">creating</span> <span class="n">local</span> <span class="n">LB</span> <span class="k">for</span> <span class="n">TLS</span> <span class="n">cluster</span> <span class="n">inbound</span><span class="o">|</span><span class="mi">8080</span><span class="o">||</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">membership</span> <span class="n">update</span> <span class="k">for</span> <span class="n">TLS</span> <span class="n">cluster</span> <span class="n">inbound</span><span class="o">|</span><span class="mi">8080</span><span class="o">||</span> <span class="n">added</span> <span class="mi">1</span> <span class="n">removed</span> <span class="mi">0</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">re</span><span class="o">-</span><span class="n">creating</span> <span class="n">local</span> <span class="n">LB</span> <span class="k">for</span> <span class="n">TLS</span> <span class="n">cluster</span> <span class="n">inbound</span><span class="o">|</span><span class="mi">8080</span><span class="o">||</span>
+<span class="n">envoy</span> <span class="n">router</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">][</span><span class="n">S11192089021443921902</span><span class="p">]</span> <span class="n">router</span> <span class="n">decoding</span> <span class="n">headers</span><span class="p">:</span>
+<span class="s1">&#39;:authority&#39;</span><span class="p">,</span> <span class="s1">&#39;fortio-server:8080&#39;</span>
+<span class="s1">&#39;:path&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span>
+<span class="s1">&#39;:method&#39;</span><span class="p">,</span> <span class="s1">&#39;GET&#39;</span>
+<span class="s1">&#39;:scheme&#39;</span><span class="p">,</span> <span class="s1">&#39;http&#39;</span>
+<span class="s1">&#39;user-agent&#39;</span><span class="p">,</span> <span class="s1">&#39;curl/7.83.1&#39;</span>
+<span class="s1">&#39;accept&#39;</span><span class="p">,</span> <span class="s1">&#39;*/*&#39;</span>
+<span class="s1">&#39;x-forwarded-proto&#39;</span><span class="p">,</span> <span class="s1">&#39;http&#39;</span>
+<span class="s1">&#39;x-request-id&#39;</span><span class="p">,</span> <span class="s1">&#39;437a5a3e-f057-4079-a959-dad3d7dcf6a6&#39;</span>
+
+<span class="s1">&#39;x-envoy-attempt-count&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span>
+<span class="s1">&#39;x-b3-traceid&#39;</span><span class="p">,</span> <span class="s1">&#39;03824b6065cd13e0559df95ebf18def7&#39;</span>
+<span class="s1">&#39;x-b3-spanid&#39;</span><span class="p">,</span> <span class="s1">&#39;559df95ebf18def7&#39;</span>
+<span class="s1">&#39;x-b3-sampled&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span>
+<span class="s1">&#39;x-forwarded-client-cert&#39;</span><span class="p">,</span> <span class="s1">&#39;By=spiffe://cluster.local/ns/mark/sa/default;Hash=a3c273eef68529003f564ff48b906ea61630a25217edbc18b57495701d089904;Subject=&quot;&quot;;URI=spiffe://cluster.local/ns/mark/sa/default&#39;</span>
+
+<span class="n">envoy</span> <span class="n">pool</span>	<span class="n">queueing</span> <span class="n">stream</span> <span class="n">due</span> <span class="n">to</span> <span class="n">no</span> <span class="n">available</span> <span class="n">connections</span>
+<span class="n">envoy</span> <span class="n">pool</span>	<span class="n">trying</span> <span class="n">to</span> <span class="n">create</span> <span class="n">new</span> <span class="n">connection</span>
+<span class="n">envoy</span> <span class="n">pool</span>	<span class="n">creating</span> <span class="n">a</span> <span class="n">new</span> <span class="n">connection</span>
+<span class="n">envoy</span> <span class="n">connection</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">current</span> <span class="n">connecting</span> <span class="n">state</span><span class="p">:</span> <span class="n">true</span>
+<span class="n">envoy</span> <span class="n">client</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">connecting</span>
+<span class="n">envoy</span> <span class="n">connection</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">connecting</span> <span class="n">to</span> <span class="mf">172.21.206.230</span><span class="p">:</span><span class="mi">8080</span>
+<span class="n">envoy</span> <span class="n">connection</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">connection</span> <span class="ow">in</span> <span class="n">progress</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">membership</span> <span class="n">update</span> <span class="k">for</span> <span class="n">TLS</span> <span class="n">cluster</span> <span class="n">inbound</span><span class="o">|</span><span class="mi">8080</span><span class="o">||</span> <span class="n">added</span> <span class="mi">1</span> <span class="n">removed</span> <span class="mi">0</span>
+<span class="n">envoy</span> <span class="n">upstream</span>	<span class="n">re</span><span class="o">-</span><span class="n">creating</span> <span class="n">local</span> <span class="n">LB</span> <span class="k">for</span> <span class="n">TLS</span> <span class="n">cluster</span> <span class="n">inbound</span><span class="o">|</span><span class="mi">8080</span><span class="o">||</span>
+<span class="n">envoy</span> <span class="n">connection</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">connected</span>
+<span class="n">envoy</span> <span class="n">client</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">connected</span>
+<span class="n">envoy</span> <span class="n">pool</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">attaching</span> <span class="n">to</span> <span class="nb">next</span> <span class="n">stream</span>
+<span class="n">envoy</span> <span class="n">pool</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">creating</span> <span class="n">stream</span>
+<span class="n">envoy</span> <span class="n">router</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">][</span><span class="n">S11192089021443921902</span><span class="p">]</span> <span class="n">pool</span> <span class="n">ready</span>
+<span class="n">envoy</span> <span class="n">client</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">response</span> <span class="n">complete</span>
+<span class="n">envoy</span> <span class="n">router</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">][</span><span class="n">S11192089021443921902</span><span class="p">]</span> <span class="n">upstream</span> <span class="n">headers</span> <span class="n">complete</span><span class="p">:</span> <span class="n">end_stream</span><span class="o">=</span><span class="n">true</span>
+<span class="n">envoy</span> <span class="n">http</span>	<span class="p">[</span><span class="n">C12990</span><span class="p">][</span><span class="n">S11192089021443921902</span><span class="p">]</span> <span class="n">encoding</span> <span class="n">headers</span> <span class="n">via</span> <span class="n">codec</span> <span class="p">(</span><span class="n">end_stream</span><span class="o">=</span><span class="n">true</span><span class="p">):</span>
+<span class="s1">&#39;:status&#39;</span><span class="p">,</span> <span class="s1">&#39;200&#39;</span>
+<span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;Sun, 28 Aug 2022 13:46:17 GMT&#39;</span>
+<span class="s1">&#39;content-length&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span>
+<span class="s1">&#39;x-envoy-upstream-service-time&#39;</span><span class="p">,</span> <span class="s1">&#39;2&#39;</span>
+<span class="s1">&#39;x-envoy-peer-metadata&#39;</span><span class="p">,</span> <span class="s1">&#39;ChwKDkFQUF9DT05UQUlORVJTEgoaCG1haW4tYXBwChoKCkNMVVNURVJfSUQSDBoKS3ViZXJuZXRlcwogCgxJTlNUQU5DRV9JUFMSEBoOMTcyLjIxLjIwNi4yMzAKGQoNSVNUSU9fVkVSU0lPThIIGgYxLjE0LjMK3AEKBkxBQkVMUxLRASrOAQoWCgNhcHASDxoNZm9ydGlvLXNlcnZlcgopChZhcHAua3ViZXJuZXRlcy5pby9uYW1lEg8aDWZvcnRpby1zZXJ2ZXIKJAoZc2VjdXJpdHkuaXN0aW8uaW8vdGxzTW9kZRIHGgVpc3RpbwoyCh9zZXJ2aWNlLmlzdGlvLmlvL2Nhbm9uaWNhbC1uYW1lEg8aDWZvcnRpby1zZXJ2ZXIKLwojc2VydmljZS5pc3Rpby5pby9jYW5vbmljYWwtcmV2aXNpb24SCBoGbGF0ZXN0ChoKB01FU0hfSUQSDxoNY2x1c3Rlci5sb2NhbAoXCgROQU1FEg8aDWZvcnRpby1zZXJ2ZXIKEwoJTkFNRVNQQUNFEgYaBG1hcmsKQgoFT1dORVISORo3a3ViZXJuZXRlczovL2FwaXMvdjEvbmFtZXNwYWNlcy9tYXJrL3BvZHMvZm9ydGlvLXNlcnZlcgoXChFQTEFURk9STV9NRVRBREFUQRICKgAKIAoNV09SS0xPQURfTkFNRRIPGg1mb3J0aW8tc2VydmVy&#39;</span>
+<span class="s1">&#39;x-envoy-peer-metadata-id&#39;</span><span class="p">,</span> <span class="s1">&#39;sidecar~172.21.206.230~fortio-server.mark~mark.svc.cluster.local&#39;</span>
+<span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;istio-envoy&#39;</span>
+
+<span class="n">envoy</span> <span class="n">wasm</span>	<span class="n">wasm</span> <span class="n">log</span> <span class="n">stats_inbound</span> <span class="n">stats_inbound</span><span class="p">:</span> <span class="p">[</span><span class="n">extensions</span><span class="o">/</span><span class="n">stats</span><span class="o">/</span><span class="n">plugin</span><span class="o">.</span><span class="n">cc</span><span class="p">:</span><span class="mi">645</span><span class="p">]::</span><span class="n">report</span><span class="p">()</span> <span class="n">metricKey</span> <span class="n">cache</span> <span class="n">hit</span> <span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="mi">12</span>
+<span class="n">envoy</span> <span class="n">wasm</span>	<span class="n">wasm</span> <span class="n">log</span> <span class="n">stats_inbound</span> <span class="n">stats_inbound</span><span class="p">:</span> <span class="p">[</span><span class="n">extensions</span><span class="o">/</span><span class="n">stats</span><span class="o">/</span><span class="n">plugin</span><span class="o">.</span><span class="n">cc</span><span class="p">:</span><span class="mi">645</span><span class="p">]::</span><span class="n">report</span><span class="p">()</span> <span class="n">metricKey</span> <span class="n">cache</span> <span class="n">hit</span> <span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="mi">6</span>
+<span class="n">envoy</span> <span class="n">wasm</span>	<span class="n">wasm</span> <span class="n">log</span> <span class="n">stats_inbound</span> <span class="n">stats_inbound</span><span class="p">:</span> <span class="p">[</span><span class="n">extensions</span><span class="o">/</span><span class="n">stats</span><span class="o">/</span><span class="n">plugin</span><span class="o">.</span><span class="n">cc</span><span class="p">:</span><span class="mi">645</span><span class="p">]::</span><span class="n">report</span><span class="p">()</span> <span class="n">metricKey</span> <span class="n">cache</span> <span class="n">hit</span> <span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="mi">10</span>
+<span class="n">envoy</span> <span class="n">wasm</span>	<span class="n">wasm</span> <span class="n">log</span> <span class="n">stats_inbound</span> <span class="n">stats_inbound</span><span class="p">:</span> <span class="p">[</span><span class="n">extensions</span><span class="o">/</span><span class="n">stats</span><span class="o">/</span><span class="n">plugin</span><span class="o">.</span><span class="n">cc</span><span class="p">:</span><span class="mi">645</span><span class="p">]::</span><span class="n">report</span><span class="p">()</span> <span class="n">metricKey</span> <span class="n">cache</span> <span class="n">hit</span> <span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="mi">14</span>
+<span class="n">envoy</span> <span class="n">pool</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">response</span> <span class="n">complete</span>
+<span class="n">envoy</span> <span class="n">pool</span>	<span class="p">[</span><span class="n">C12991</span><span class="p">]</span> <span class="n">destroying</span> <span class="n">stream</span><span class="p">:</span> <span class="mi">0</span> <span class="n">remaining</span>
+</pre></div>
+</div>
+<p>下图说明日志相关的组件与源码链接：</p>
+<figure class="full-width align-default" id="id4">
+<img alt="图：Istio里的 Envoy Inbound 组件与日志" src="../_images/log-envoy%40istio-conf-eg-inbound.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Istio里的 Envoy Inbound 组件与日志</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Flog-envoy&#64;istio-conf-eg-inbound.drawio.svg">用 Draw.io 打开</a></em></p>
+</section>
+</section>
+<section id="outbound">
+<h2>Outbound 数据流 “推断”</h2>
+<p>分析上面获取到的 Envoy 配置，可以 “推断” 到下面 Outbound 数据流图：</p>
+<figure class="full-width align-default" id="istio-envoy-outbound">
+<img alt="图：Istio里的 Envoy Outbound 配置举例" src="../_images/envoy%40istio-conf-eg-outbound.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Istio里的 Envoy Outbound 配置举例</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fenvoy&#64;istio-conf-eg-outbound.drawio.svg">用 Draw.io 打开</a></em></p>
+</section>
+<section id="bpftrace">
+<h2>用 bpftrace 检查数据流</h2>
+<p>见我的 Blog: <a class="reference external" href="https://blog.mygraphql.com/zh/posts/low-tec/trace/trace-istio/trace-istio-part3/">逆向工程与云原生现场分析 Part3 —— eBPF 跟踪 Istio/Envoy 事件驱动模型、连接建立、TLS 握手与 filter_chain 选择</a></p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

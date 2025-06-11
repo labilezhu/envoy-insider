@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>源码设计</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>源码设计</h1>
+<section id="id2">
+<h2>设计模式与行话</h2>
+<p>时常有人问，如何快速系统地学习一个领域的知识。现代社会，大部分知识是可以公开访问到的。但让人烦恼的是，文档都有了，源码也有了，文档中的每一个单词都懂，源码中的每一小段好像也懂。但要整体把握一个系统的机理，还是相当困难。哪怕把范畴缩小到学习一个软件系统，或者直接说，是 Envoy。</p>
+<p>Envoy 是开源软件，文档也写得相当细致，这在开源项目中是少有的细致。C++ 14 的写法比起 C 和 C++ 1998 已经很平易近人了。可读性已经比较接近 Java，并且不像看 Linux 内核一样那么多缩写术语。但和任何其它软件源码一样，Envoy 有自己的设计模式和行话术语，要读懂其中的行话，就会事半功倍。</p>
+<section id="callback">
+<h3>Callback回调设计模式</h3>
+<p>Gang of Four (GoF) 的 《<em>Design Patterns</em>》 中，并没有一个设计模式叫 Callback 的。<code class="docutils literal notranslate"><span class="pre">Callback</span> <span class="pre">设计模式</span></code>其实是 <a class="reference external" href="https://en.wikipedia.org/wiki/Observer_pattern"><code class="docutils literal notranslate"><span class="pre">Observer</span> <span class="pre">pattern(观察者模式)</span></code></a> 的一个变体或应用。</p>
+<blockquote>
+<div><p>观察者模式解决了以下问题：</p>
+<ul class="simple">
+<li><p>解藕对象之间的一对多依赖关系，避免对象紧密耦合。</p></li>
+<li><p>当一个对象更改状态时，自动更新不限数量的依赖对象。</p></li>
+<li><p>一个对象可以通知多个其他对象。</p></li>
+</ul>
+</div></blockquote>
+<p>以上是  <a class="reference external" href="https://en.wikipedia.org/wiki/Observer_pattern">Wkipedia</a> 关于<code class="docutils literal notranslate"><span class="pre">Observer</span> <span class="pre">pattern(观察者模式)</span></code>  的解释。我觉得本质上，观察者模式 更多是一种运用 <code class="docutils literal notranslate"><span class="pre">agnosticism(不可知论)</span> </code>让对象依赖反转的设计模式。</p>
+<p>在 Envoy 中，它的主要作用是让各子系统在设计时可以互相独立。减少直接（起码是编译期）的依赖。Envoy 大量使用了这种 <code class="docutils literal notranslate"><span class="pre">Callback</span> <span class="pre">设计模式</span></code>，并有自己的命名规范。这是要读懂 Envoy 代码要过的门槛。</p>
+<p><img alt="OOP 子系统回调设计模式" src="../../../_images/oop-subsystem-callback.drawio.svg" /></p>
+<p>上面有两个子系统，<code class="docutils literal notranslate"><span class="pre">Network::TransportSocket</span></code>  与  <code class="docutils literal notranslate"><span class="pre">Network::Connection</span></code> 。你可以这么想，如果 每个使用 <code class="docutils literal notranslate"><span class="pre">Network::TransportSocket</span></code>  的子系统都要 <code class="docutils literal notranslate"><span class="pre">Network::TransportSocket</span></code> 去依赖通知，结果是一个循环依赖。而 Callback 的设计模式，避免了这个问题。</p>
+</section>
+</section>
+<section id="id3">
+<h2>子系统</h2>
+<p>Envoy 为了模块化，设计出很多在编译期相互独立的子系统。而这些子系统通过 显式依赖和 Callback 胶水等的依赖反转方法，实现互动。一般，每个子系统都有自己的 C++ namespace(名几个相关的子系统共用一个 namespace)。以下列出主要的子系统：</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Buffer</span></code>  - 缓存块</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Api</span></code> - 操作系统调用</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Config</span></code> - XDS 等配置</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Event</span></code> - 事件驱动</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Http</span></code> - HTTP 相关</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Http::ConnectionPool</span></code> - HTTP 连接池相关</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Http1</span></code> - HTTP/1.1 相关</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Http2</span></code> - HTTP/2 相关</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Network</span></code> - IP/TCP/DNS/Socket  层，即 OSI 的 L3/L4 层相关。包括 <code class="docutils literal notranslate"><span class="pre">Envoy</span> <span class="pre">Network</span> <span class="pre">Filter</span></code> 、<code class="docutils literal notranslate"><span class="pre">Listener</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Network::Address</span></code> - IP 地址相关</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Server</span></code> - Envoy 作为服务 Daemon  lifecycle 相关的实现</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Stats</span></code> - 监控指标相关</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Tcp</span></code> - TCP 与连接池相关</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Upstream</span></code> - Upstream 相关的负载均衡、健康检查等等</p></li>
+<li><p>``</p></li>
+</ul>
+<p>其中，大部分子系统均有自己的功能 <code class="docutils literal notranslate"><span class="pre">C++</span> <span class="pre">Class/Interface</span></code>，如 <code class="docutils literal notranslate"><span class="pre">Envoy</span> <span class="pre">Network</span> <span class="pre">Filter</span></code>  的 <code class="docutils literal notranslate"><span class="pre">ReadFilter</span></code>，以及其配套的 Callback 接口定义，如 <code class="docutils literal notranslate"><span class="pre">ReadFilterCallbacks</span></code> 。</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

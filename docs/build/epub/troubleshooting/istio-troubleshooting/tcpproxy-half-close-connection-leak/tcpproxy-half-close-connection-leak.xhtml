@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>TCP Proxy half-closed connection leak for 1 hour in some scenarios</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="tcp-proxy-half-closed-connection-leak-for-1-hour-in-some-scenarios">
+<h1>TCP Proxy half-closed connection leak for 1 hour in some scenarios</h1>
+<p>Sidecar intercept and TCP proxy all outbound TCP connection by default:
+<code class="docutils literal notranslate"><span class="pre">(app</span> <span class="pre">--[conntrack</span> <span class="pre">DNAT]--&gt;</span> <span class="pre">sidecar)</span> <span class="pre">-----&gt;</span> <span class="pre">upstream-tcp-service</span></code></p>
+<ol class="arabic simple">
+<li><p>When <code class="docutils literal notranslate"><span class="pre">upstream-tcp-service</span></code> want to disconnect, it sent <code class="docutils literal notranslate"><span class="pre">FIN</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sidecar</span></code> received <code class="docutils literal notranslate"><span class="pre">FIN</span></code> and call <a class="reference external" href="https://github.com/envoyproxy/envoy/pull/2386">shutdown(fd,ENVOY_SHUT_WR)</a> syscall on the downsteam socket to forward the <code class="docutils literal notranslate"><span class="pre">FIN</span></code> to <code class="docutils literal notranslate"><span class="pre">app</span></code> and keep the connection half-close. The socket state is <code class="docutils literal notranslate"><span class="pre">FIN_WAIT2</span></code> now.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">conntrack</span> <span class="pre">table</span></code> will start a 60s timer(<code class="docutils literal notranslate"><span class="pre">/proc/sys/net/netfilte/nf_conntrack_tcp_timeout_close_wait</span></code>). After timeout, DNAT entry will be removed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">app</span></code> received <code class="docutils literal notranslate"><span class="pre">FIN</span></code></p></li>
+<li><p>In normal scenarios, after receive <code class="docutils literal notranslate"><span class="pre">FIN</span></code>, the <code class="docutils literal notranslate"><span class="pre">app</span></code> will call <code class="docutils literal notranslate"><span class="pre">close()</span></code> quickly and it close the socket and reply <code class="docutils literal notranslate"><span class="pre">FIN</span></code>, then all 2 sockets in sidecar will be closed.</p></li>
+<li><p>BUT, if the <code class="docutils literal notranslate"><span class="pre">app</span></code> call <code class="docutils literal notranslate"><span class="pre">close()</span></code> after 60s. The <code class="docutils literal notranslate"><span class="pre">FIN</span></code> sent by <code class="docutils literal notranslate"><span class="pre">app</span></code> will not deliver to <code class="docutils literal notranslate"><span class="pre">sidecar</span></code>. Because the conntrack table DNAT entry was removed at 60s.</p></li>
+</ol>
+<p>So 2 sockets leaked on <code class="docutils literal notranslate"><span class="pre">sidecar</span></code>.</p>
+<p>We know that, gernally speaking, <code class="docutils literal notranslate"><span class="pre">FIN_WAIT2</span></code> socket has timer to close it: <code class="docutils literal notranslate"><span class="pre">/proc/sys/net/ipv4/tcp_fin_timeout</span></code></p>
+<p>But for a half-closed <code class="docutils literal notranslate"><span class="pre">FIN_WAIT2</span></code> socket(<code class="docutils literal notranslate"><span class="pre">shutdown(fd,ENVOY_SHUT_WR)</span></code>), no timer exists.</p>
+<p>Good news is:<code class="docutils literal notranslate"><span class="pre">Envoy</span> <span class="pre">TCPProxy</span> <span class="pre">Filter</span></code> has an <a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto">idle_timeout</a> setting which by default is 1 hour. So above problem will have a 1 hour leak window before being GC.</p>
+<p>But in some scenarios, it will be an issue anyway.
+The github issue I submited: <a class="reference external" href="https://github.com/istio/istio/issues/43297">TCP Proxy half-closed connection leak for 1 hour in some scenarios #43297</a></p>
+<section id="base-knowledge">
+<h2>Base knowledge</h2>
+<ul>
+<li><p>Make a connection by specified ephemeral port. e.g:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>nc<span class="w"> </span>-p<span class="w"> </span><span class="m">44410</span><span class="w"> </span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="m">7777</span>
+</pre></div>
+</div>
+</li>
+<li><p>List sockets with timer(state/retry timeout) info. e.g:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ss<span class="w"> </span>-naoep
+
+tcp<span class="w">   </span>SYN-SENT<span class="w">    </span><span class="m">0</span><span class="w">  </span><span class="m">1</span><span class="w">  </span><span class="m">172</span>.29.73.7:44410<span class="w">    </span><span class="m">172</span>.21.206.198:7777<span class="w">         </span>users:<span class="o">((</span><span class="s2">&quot;nc&quot;</span>,pid<span class="o">=</span><span class="m">144426</span>,fd<span class="o">=</span><span class="m">3</span><span class="o">))</span><span class="w"> </span>timer:<span class="o">(</span>on,1.684ms<span class="o">(</span>timeout<span class="o">)</span>,2<span class="o">(</span>retry<span class="w"> </span>counter<span class="o">))</span><span class="w"> </span>ino:2024378629<span class="w"> </span>sk:aa4e2<span class="w"> </span>&lt;-&gt;
+</pre></div>
+</div>
+</li>
+</ul>
+<section id="conntrack-base-knowledge">
+<h3>Conntrack base knowledge</h3>
+</section>
+<section id="tcp">
+<h3>TCP</h3>
+<p>//TODO</p>
+</section>
+<section id="conntrack-table">
+<h3>Conntrack table</h3>
+<ul>
+<li><p>list conntrack table command and output explain:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conntrack<span class="w"> </span>-L<span class="w"> </span>
+
+tcp<span class="w">  </span><span class="m">6</span><span class="w"> </span><span class="m">54</span><span class="o">(</span>entry<span class="w"> </span>expire<span class="w"> </span>seconds<span class="o">)</span><span class="w"> </span>CLOSE_WAIT<span class="o">(</span>entry<span class="w"> </span>state<span class="o">)</span><span class="w"> </span>
+<span class="o">(</span><span class="nb">local</span><span class="w"> </span>endpoint<span class="o">)</span>:src<span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span>
+<span class="o">(</span>remote<span class="w"> </span>endpoint<span class="o">)</span><span class="nv">src</span><span class="o">=</span><span class="m">127</span>.0.0.1<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">15001</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="o">[</span>ASSURED<span class="o">]</span><span class="w"> </span><span class="nv">mark</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">use</span><span class="o">=</span><span class="m">1</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>Conntrack by default will not DNAT some invalid tcp packet.</p>
+</section>
+</section>
+<section id="environment">
+<h2>Environment</h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ./istioctl version
+client version: 1.16.2
+control plane version: 1.16.2
+data plane version: 1.16.2 (4 proxies)
+
+$ kubectl version --short
+Flag --short has been deprecated, and will be removed in the future. The --short output will become the default.
+Client Version: v1.25.3
+Kustomize Version: v4.5.7
+Server Version: v1.25.6
+</pre></div>
+</div>
+<p>CNI: Calico</p>
+<section id="testing-pod">
+<h3>Testing POD</h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">IP</span><span class="p">:</span> <span class="mf">172.29.73.7</span>
+<span class="n">POD</span> <span class="n">Name</span><span class="p">:</span> <span class="n">fortio</span><span class="o">-</span><span class="n">server</span><span class="o">-</span><span class="n">l2</span><span class="o">-</span><span class="mi">0</span>
+<span class="n">pod</span> <span class="n">running</span> <span class="n">at</span> <span class="n">worker</span> <span class="n">node</span><span class="p">:</span> <span class="n">sle</span>
+
+<span class="n">Worker</span> <span class="n">Node</span><span class="p">:</span>
+<span class="n">Kernel</span><span class="p">:</span> <span class="mf">5.14.21</span><span class="o">-</span><span class="mf">150400.24.21</span><span class="o">-</span><span class="n">default</span>
+<span class="n">Linux</span> <span class="n">distros</span><span class="p">:</span> <span class="n">SUSE</span> <span class="n">Linux</span> <span class="n">Enterprise</span> <span class="n">Server</span> <span class="mi">15</span> <span class="n">SP4</span>
+</pre></div>
+</div>
+</section>
+<section id="tcp-service-pod">
+<h3>TCP service pod</h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">IP</span><span class="p">:</span> <span class="mf">172.21.206.198</span>
+<span class="n">POD</span> <span class="n">Name</span><span class="p">:</span> <span class="n">netshoot</span><span class="o">-</span><span class="mi">0</span>
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># listen on port 7777</span>
+
+kubectl<span class="w"> </span>-it<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>netshoot-0<span class="w"> </span>--<span class="w"> </span>nc<span class="w"> </span>-l<span class="w"> </span>-k<span class="w"> </span><span class="m">7777</span>
+</pre></div>
+</div>
+</section>
+<section id="enable-conntrack-s-invalid-packet-log-on-testing-pod">
+<h3>enable conntrack’s invalid packet log on Testing POD</h3>
+<p>enable <code class="docutils literal notranslate"><span class="pre">nf_log_all_netns</span></code> on worker node:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sle:/proc/sys<span class="w"> </span><span class="c1"># sudo su</span>
+sle:/proc/sys<span class="w"> </span><span class="c1"># echo 1 &gt; /proc/sys/net/netfilter/nf_log_all_netns</span>
+</pre></div>
+</div>
+<p>add iptables rule on container:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>fortio-server-l2-0:/<span class="w"> </span>$
+
+iptables<span class="w"> </span>-t<span class="w"> </span>mangle<span class="w"> </span>-N<span class="w"> </span>ISTIO_INBOUND_LOG
+iptables<span class="w"> </span>-t<span class="w"> </span>mangle<span class="w"> </span>-A<span class="w"> </span>ISTIO_INBOUND_LOG<span class="w"> </span>-m<span class="w"> </span>conntrack<span class="w"> </span>--ctstate<span class="w"> </span>INVALID<span class="w"> </span>-j<span class="w"> </span>LOG<span class="w"> </span>--log-level<span class="w"> </span>debug<span class="w"> </span>--log-prefix<span class="w"> </span><span class="s1">&#39;ISTIO_INBOUND_INVALID: &#39;</span>
+iptables<span class="w"> </span>-t<span class="w"> </span>mangle<span class="w"> </span>-A<span class="w"> </span>PREROUTING<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span>-j<span class="w"> </span>ISTIO_INBOUND_LOG<span class="w"> </span>
+
+iptables<span class="w"> </span>-t<span class="w"> </span>mangle<span class="w"> </span>-N<span class="w"> </span>ISTIO_OUTBOUND_LOG
+iptables<span class="w"> </span>-t<span class="w"> </span>mangle<span class="w"> </span>-A<span class="w"> </span>ISTIO_OUTBOUND_LOG<span class="w"> </span>-m<span class="w"> </span>conntrack<span class="w"> </span>--ctstate<span class="w"> </span>INVALID<span class="w"> </span>-j<span class="w"> </span>LOG<span class="w"> </span>--log-level<span class="w"> </span>debug<span class="w"> </span>--log-prefix<span class="w"> </span><span class="s1">&#39;ISTIO_OUTBOUND_INVALID: &#39;</span>
+iptables<span class="w"> </span>-t<span class="w"> </span>mangle<span class="w"> </span>-A<span class="w"> </span>OUTPUT<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span>-j<span class="w"> </span>ISTIO_OUTBOUND_LOG<span class="w"> </span>
+</pre></div>
+</div>
+</section>
+<section id="skills">
+<h3>skills</h3>
+<section id="nsenter-network-namespace">
+<h4>nsenter network namespace</h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span><span class="nv">$WORKER_NODE_OF_POD</span>
+
+<span class="nb">export</span><span class="w"> </span><span class="nv">POD</span><span class="o">=</span><span class="s2">&quot;fortio-server-l2-0&quot;</span>
+<span class="nv">ENVOY_PIDS</span><span class="o">=</span><span class="k">$(</span>pgrep<span class="w"> </span>envoy<span class="k">)</span>
+<span class="k">while</span><span class="w"> </span><span class="nv">IFS</span><span class="o">=</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-r<span class="w"> </span>ENVOY_PID<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="nv">HN</span><span class="o">=</span><span class="k">$(</span>sudo<span class="w"> </span>nsenter<span class="w"> </span>-u<span class="w"> </span>-t<span class="w"> </span><span class="nv">$ENVOY_PID</span><span class="w"> </span>hostname<span class="k">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HN</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$POD</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span><span class="w"> </span><span class="c1"># space between = is important</span>
+<span class="w">        </span>sudo<span class="w"> </span>nsenter<span class="w"> </span>-u<span class="w"> </span>-t<span class="w"> </span><span class="nv">$ENVOY_PID</span><span class="w"> </span>hostname
+<span class="w">        </span><span class="nb">export</span><span class="w"> </span><span class="nv">POD_PID</span><span class="o">=</span><span class="nv">$ENVOY_PID</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="k">done</span><span class="w"> </span><span class="o">&lt;&lt;&lt;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ENVOY_PIDS</span><span class="s2">&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$POD_PID</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PID</span><span class="o">=</span><span class="nv">$POD_PID</span>
+
+sudo<span class="w"> </span>nsenter<span class="w"> </span>-t<span class="w"> </span><span class="nv">$PID</span><span class="w"> </span>-n<span class="w"> </span>-u
+
+<span class="nb">export</span><span class="w"> </span><span class="nv">netshoot_0</span><span class="o">=</span><span class="m">172</span>.21.206.198
+<span class="nb">export</span><span class="w"> </span><span class="nv">fortio_server_l2_0</span><span class="o">=</span><span class="m">172</span>.29.73.7
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="socket-leak-occupy-on-fin-wait2">
+<h2>socket leak &amp; occupy on FIN_WAIT2</h2>
+<p>socket leak &amp; occupy on FIN_WAIT2 between (ephemeral port) &lt;-&gt; 15001</p>
+<p>Only happens in these cases:</p>
+<ul class="simple">
+<li><p>TCP level proxy(TCPProxy)</p></li>
+</ul>
+<section id="tcpproxy-connections-established">
+<h3>1. TCPProxy: connections ESTABLISHED</h3>
+<p><img alt="" src="../../../_images/1-TCPProxy-connections-ESTABLISHED.drawio.svg" /></p>
+<p><strong><a class="reference external" href="https://app.diagrams.net/#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fen%2Flatest%2F_images%2F1-TCPProxy-connections-ESTABLISHED.drawio.svg">用 Draw.io 打开</a></strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>fortio-server-l2-0:/<span class="w"> </span>$<span class="w"> </span>nc<span class="w"> </span>-p<span class="w"> </span><span class="m">44410</span><span class="w"> </span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="m">7777</span>
+
+fortio-server-l2-0:/<span class="w"> </span>$<span class="w"> </span>conntrack<span class="w"> </span>-L<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>egrep<span class="w"> </span><span class="s2">&quot;172.21.206.198&quot;</span>
+
+tcp<span class="w">  </span><span class="m">6</span><span class="w"> </span><span class="m">431954</span><span class="w"> </span>ESTABLISHED<span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="m">127</span>.0.0.1<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">15001</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="o">[</span>ASSURED<span class="o">]</span><span class="w"> </span><span class="nv">mark</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">use</span><span class="o">=</span><span class="m">1</span>
+tcp<span class="w">  </span><span class="m">6</span><span class="w"> </span><span class="m">431954</span><span class="w"> </span>ESTABLISHED<span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">38072</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">38072</span><span class="w"> </span><span class="o">[</span>ASSURED<span class="o">]</span><span class="w"> </span><span class="nv">mark</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">use</span><span class="o">=</span><span class="m">1</span>
+
+
+fortio-server-l2-0:/<span class="w"> </span>$<span class="w">  </span>ss<span class="w"> </span>-naoep<span class="w"> </span><span class="p">|</span><span class="w"> </span>egrep<span class="w"> </span><span class="s1">&#39;44410|7777&#39;</span>
+
+tcp<span class="w">   </span>ESTAB<span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">172</span>.29.73.7:38072<span class="w">    </span><span class="m">172</span>.21.206.198:7777<span class="w">         </span>users:<span class="o">((</span><span class="s2">&quot;envoy&quot;</span>,pid<span class="o">=</span><span class="m">51435</span>,fd<span class="o">=</span><span class="m">135</span><span class="o">))</span><span class="w"> </span>uid:201507<span class="w"> </span>ino:2020910283<span class="w"> </span>sk:a8d07<span class="w"> </span>&lt;-&gt;
+tcp<span class="w">   </span>ESTAB<span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">172</span>.29.73.7:44410<span class="w">    </span><span class="m">172</span>.21.206.198:7777<span class="w">         </span>users:<span class="o">((</span><span class="s2">&quot;nc&quot;</span>,pid<span class="o">=</span><span class="m">129742</span>,fd<span class="o">=</span><span class="m">3</span><span class="o">))</span><span class="w"> </span>ino:2020879009<span class="w"> </span>sk:a8d08<span class="w"> </span>&lt;-&gt;
+tcp<span class="w">   </span>ESTAB<span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">     </span><span class="m">127</span>.0.0.1:15001<span class="w">  </span><span class="m">172</span>.29.73.7:44410<span class="w">        </span>users:<span class="o">((</span><span class="s2">&quot;envoy&quot;</span>,pid<span class="o">=</span><span class="m">51435</span>,fd<span class="o">=</span><span class="m">121</span><span class="o">))</span><span class="w"> </span>uid:201507<span class="w"> </span>ino:2020910282<span class="w"> </span>sk:a8d09<span class="w"> </span>&lt;-&gt;
+</pre></div>
+</div>
+</section>
+<section id="tcpproxy-upstream-service-active-close-connection">
+<h3>2. TCPProxy: upstream service active close connection</h3>
+<p><img alt="" src="../../../_images/2-TCPProxy-upstream-service-active-close-connection.drawio.svg" /></p>
+<p><strong><a class="reference external" href="https://app.diagrams.net/#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fen%2Flatest%2F_images%2F2-TCPProxy-upstream-service-active-close-connection.drawio.svg">用 Draw.io 打开</a></strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>fortio-server-l2-0:/<span class="w"> </span>$<span class="w">  </span>conntrack<span class="w"> </span>-L<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>egrep<span class="w"> </span><span class="s2">&quot;10.104.76.163|172.21.206.198&quot;</span>
+
+tcp<span class="w">  </span><span class="m">6</span><span class="w"> </span><span class="m">54</span><span class="o">(</span>expire<span class="w"> </span>seconds<span class="o">)</span><span class="w"> </span>CLOSE_WAIT<span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="m">127</span>.0.0.1<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">15001</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="o">[</span>ASSURED<span class="o">]</span><span class="w"> </span><span class="nv">mark</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">use</span><span class="o">=</span><span class="m">1</span>
+tcp<span class="w">  </span><span class="m">6</span><span class="w"> </span><span class="m">54</span><span class="w"> </span>CLOSE_WAIT<span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">38072</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">sport</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">dport</span><span class="o">=</span><span class="m">38072</span><span class="w"> </span><span class="o">[</span>ASSURED<span class="o">]</span><span class="w"> </span><span class="nv">mark</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">use</span><span class="o">=</span><span class="m">1</span>
+
+
+fortio-server-l2-0:/<span class="w"> </span>$<span class="w">  </span>ss<span class="w"> </span>-naoep<span class="w"> </span><span class="p">|</span><span class="w"> </span>egrep<span class="w"> </span><span class="s1">&#39;44410|7777&#39;</span>
+
+tcp<span class="w">   </span>CLOSE-WAIT<span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">172</span>.29.73.7:38072<span class="w">    </span><span class="m">172</span>.21.206.198:7777<span class="w">         </span>users:<span class="o">((</span><span class="s2">&quot;envoy&quot;</span>,pid<span class="o">=</span><span class="m">51435</span>,fd<span class="o">=</span><span class="m">135</span><span class="o">))</span><span class="w"> </span>uid:201507<span class="w"> </span>ino:2020910283<span class="w"> </span>sk:a8d07<span class="w"> </span>--&gt;
+tcp<span class="w">   </span>CLOSE-WAIT<span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">172</span>.29.73.7:44410<span class="w">    </span><span class="m">172</span>.21.206.198:7777<span class="w">         </span>users:<span class="o">((</span><span class="s2">&quot;nc&quot;</span>,pid<span class="o">=</span><span class="m">129742</span>,fd<span class="o">=</span><span class="m">3</span><span class="o">))</span><span class="w"> </span>ino:2020879009<span class="w"> </span>sk:a8d08<span class="w"> </span>--&gt;
+tcp<span class="w">   </span>FIN-WAIT-2<span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">     </span><span class="m">127</span>.0.0.1:15001<span class="w">  </span><span class="m">172</span>.29.73.7:44410<span class="w">        </span>users:<span class="o">((</span><span class="s2">&quot;envoy&quot;</span>,pid<span class="o">=</span><span class="m">51435</span>,fd<span class="o">=</span><span class="m">121</span><span class="o">))</span><span class="w"> </span>uid:201507<span class="w"> </span>ino:2020910282<span class="w"> </span>sk:a8d09<span class="w"> </span>&lt;--
+</pre></div>
+</div>
+</section>
+<section id="after-60s-conntrack-table-close-wait-entry-timeout">
+<h3>3. after 60s, conntrack table CLOSE_WAIT entry timeout</h3>
+<p>After 60s, conntrack table CLOSE_WAIT entry timeout. Entry removed.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conntrack<span class="w"> </span>-L<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>egrep<span class="w"> </span><span class="s2">&quot;10.104.76.163|172.21.206.198&quot;</span>
+
+<span class="o">[</span>None<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="app-close-connection-fin-not-reach-peer">
+<h3>4. app close connection - FIN not reach peer</h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">app</span></code> close connection - FIN not reach peer. So  socket <code class="docutils literal notranslate"><span class="pre">127.0.0.1:15001</span>&#160; <span class="pre">172.29.73.7:44410</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">users:((&quot;envoy&quot;,pid=51435,fd=121))</span></code> stuck in <code class="docutils literal notranslate"><span class="pre">FIN-WAIT-2</span></code>.</p>
+<p><img alt="" src="../../../_images/4-pod-main-app%28nc%29-close-connection-FIN-not-reach-peer.drawio.svg" /></p>
+<p><strong><a class="reference external" href="https://app.diagrams.net/#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fen%2Flatest%2F_images%2F4-pod-main-app(nc)-close-connection-FIN-not-reach-peer.drawio.svg">用 Draw.io 打开</a></strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>fortio-server-l2-0:/<span class="w"> </span>$<span class="w"> </span>nc<span class="w"> </span>-p<span class="w"> </span><span class="m">44410</span><span class="w"> </span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="m">7777</span>
+^C
+
+fortio-server-l2-0:/<span class="w"> </span>$<span class="w"> </span>ss<span class="w"> </span>-naoep<span class="w"> </span><span class="p">|</span><span class="w"> </span>egrep<span class="w"> </span><span class="s1">&#39;44410|7777&#39;</span><span class="w"> </span>
+
+tcp<span class="w">   </span>LAST-ACK<span class="w">    </span><span class="m">0</span><span class="w">  </span><span class="m">1</span><span class="w">  </span><span class="m">172</span>.29.73.7:44410<span class="w">    </span><span class="m">172</span>.21.206.198:7777<span class="w">         </span>timer:<span class="o">(</span>on,2.056ms,5<span class="o">)</span><span class="w"> </span>ino:0<span class="w"> </span>sk:a8d08<span class="w"> </span>---
+
+
+fortio-server-l2-0:/<span class="w"> </span>$<span class="w"> </span>nstat<span class="w"> </span>-zas<span class="w"> </span><span class="p">|</span><span class="w"> </span>egrep<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;retr|cha&#39;</span>
+
+TcpRetransSegs<span class="w"> </span>￪<span class="w">        </span><span class="m">165172</span><span class="w">        </span><span class="m">0</span>.0
+TcpExtTCPLostRetransmit<span class="w"> </span>￪<span class="w">   </span><span class="m">826</span><span class="w">      </span><span class="m">0</span>.0
+
+
+<span class="c1">## conntrack invalid</span>
+
+fortio-server-l2-0:/#<span class="w"> </span>tcpdump<span class="w"> </span>-i<span class="w"> </span>eth0<span class="w"> </span>-n<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;port 44410&quot;</span>
+tcpdump:<span class="w"> </span>listening<span class="w"> </span>on<span class="w"> </span>eth0,<span class="w"> </span>link-type<span class="w"> </span>EN10MB<span class="w"> </span><span class="o">(</span>Ethernet<span class="o">)</span>,<span class="w"> </span>capture<span class="w"> </span>size<span class="w"> </span><span class="m">262144</span><span class="w"> </span>bytes
+
+<span class="m">16</span>:10:45.360217<span class="w"> </span>IP<span class="w"> </span><span class="o">(</span>tos<span class="w"> </span>0x0,<span class="w"> </span>ttl<span class="w"> </span><span class="m">64</span>,<span class="w"> </span>id<span class="w"> </span><span class="m">64473</span>,<span class="w"> </span>offset<span class="w"> </span><span class="m">0</span>,<span class="w"> </span>flags<span class="w"> </span><span class="o">[</span>DF<span class="o">]</span>,<span class="w"> </span>proto<span class="w"> </span>TCP<span class="w"> </span><span class="o">(</span><span class="m">6</span><span class="o">)</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">52</span><span class="o">)</span>
+<span class="w">    </span><span class="m">172</span>.29.73.7.44410<span class="w"> </span>&gt;<span class="w"> </span><span class="m">172</span>.21.206.198.7777:<span class="w"> </span>Flags<span class="w"> </span><span class="o">[</span>F.<span class="o">]</span>,<span class="w"> </span>cksum<span class="w"> </span>0x7c2c<span class="w"> </span><span class="o">(</span>incorrect<span class="w"> </span>-&gt;<span class="w"> </span>0xcc2a<span class="o">)</span>,<span class="w"> </span>seq<span class="w"> </span><span class="m">2082340714</span>,<span class="w"> </span>ack<span class="w"> </span><span class="m">2209788529</span>,<span class="w"> </span>win<span class="w"> </span><span class="m">31</span>,<span class="w"> </span>options<span class="w"> </span><span class="o">[</span>nop,nop,TS<span class="w"> </span>val<span class="w"> </span><span class="m">1248588711</span><span class="w"> </span>ecr<span class="w"> </span><span class="m">2148004549</span><span class="o">]</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">0</span>
+<span class="m">16</span>:10:45.572031<span class="w"> </span>IP<span class="w"> </span><span class="o">(</span>tos<span class="w"> </span>0x0,<span class="w"> </span>ttl<span class="w"> </span><span class="m">64</span>,<span class="w"> </span>id<span class="w"> </span><span class="m">64474</span>,<span class="w"> </span>offset<span class="w"> </span><span class="m">0</span>,<span class="w"> </span>flags<span class="w"> </span><span class="o">[</span>DF<span class="o">]</span>,<span class="w"> </span>proto<span class="w"> </span>TCP<span class="w"> </span><span class="o">(</span><span class="m">6</span><span class="o">)</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">52</span><span class="o">)</span>
+<span class="w">    </span><span class="m">172</span>.29.73.7.44410<span class="w"> </span>&gt;<span class="w"> </span><span class="m">172</span>.21.206.198.7777:<span class="w"> </span>Flags<span class="w"> </span><span class="o">[</span>F.<span class="o">]</span>,<span class="w"> </span>cksum<span class="w"> </span>0x7c2c<span class="w"> </span><span class="o">(</span>incorrect<span class="w"> </span>-&gt;<span class="w"> </span>0xcb57<span class="o">)</span>,<span class="w"> </span>seq<span class="w"> </span><span class="m">0</span>,<span class="w"> </span>ack<span class="w"> </span><span class="m">1</span>,<span class="w"> </span>win<span class="w"> </span><span class="m">31</span>,<span class="w"> </span>options<span class="w"> </span><span class="o">[</span>nop,nop,TS<span class="w"> </span>val<span class="w"> </span><span class="m">1248588922</span><span class="w"> </span>ecr<span class="w"> </span><span class="m">2148004549</span><span class="o">]</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">0</span>
+<span class="m">16</span>:10:45.780034<span class="w"> </span>IP<span class="w"> </span><span class="o">(</span>tos<span class="w"> </span>0x0,<span class="w"> </span>ttl<span class="w"> </span><span class="m">64</span>,<span class="w"> </span>id<span class="w"> </span><span class="m">64475</span>,<span class="w"> </span>offset<span class="w"> </span><span class="m">0</span>,<span class="w"> </span>flags<span class="w"> </span><span class="o">[</span>DF<span class="o">]</span>,<span class="w"> </span>proto<span class="w"> </span>TCP<span class="w"> </span><span class="o">(</span><span class="m">6</span><span class="o">)</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">52</span><span class="o">)</span>
+<span class="w">    </span><span class="m">172</span>.29.73.7.44410<span class="w"> </span>&gt;<span class="w"> </span><span class="m">172</span>.21.206.198.7777:<span class="w"> </span>Flags<span class="w"> </span><span class="o">[</span>F.<span class="o">]</span>,<span class="w"> </span>cksum<span class="w"> </span>0x7c2c<span class="w"> </span><span class="o">(</span>incorrect<span class="w"> </span>-&gt;<span class="w"> </span>0xca87<span class="o">)</span>,<span class="w"> </span>seq<span class="w"> </span><span class="m">0</span>,<span class="w"> </span>ack<span class="w"> </span><span class="m">1</span>,<span class="w"> </span>win<span class="w"> </span><span class="m">31</span>,<span class="w"> </span>options<span class="w"> </span><span class="o">[</span>nop,nop,TS<span class="w"> </span>val<span class="w"> </span><span class="m">1248589130</span><span class="w"> </span>ecr<span class="w"> </span><span class="m">2148004549</span><span class="o">]</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">0</span>
+<span class="m">16</span>:10:46.220029<span class="w"> </span>IP<span class="w"> </span><span class="o">(</span>tos<span class="w"> </span>0x0,<span class="w"> </span>ttl<span class="w"> </span><span class="m">64</span>,<span class="w"> </span>id<span class="w"> </span><span class="m">64476</span>,<span class="w"> </span>offset<span class="w"> </span><span class="m">0</span>,<span class="w"> </span>flags<span class="w"> </span><span class="o">[</span>DF<span class="o">]</span>,<span class="w"> </span>proto<span class="w"> </span>TCP<span class="w"> </span><span class="o">(</span><span class="m">6</span><span class="o">)</span>,<span class="w"> </span>length<span class="w"> </span><span class="m">52</span><span class="o">)</span>
+...
+
+sle:/<span class="w"> </span>$<span class="w"> </span>dmesg<span class="w"> </span>--follow-new<span class="w"> </span>-T<span class="w"> </span>-l<span class="w"> </span>debug
+<span class="o">[</span>Sat<span class="w"> </span>Feb<span class="w">  </span><span class="m">4</span><span class="w"> </span><span class="m">16</span>:10:09<span class="w"> </span><span class="m">2023</span><span class="o">]</span><span class="w"> </span>ISTIO_OUTBOUND_INVALID:<span class="w"> </span><span class="nv">IN</span><span class="o">=</span><span class="w"> </span><span class="nv">OUT</span><span class="o">=</span>eth0<span class="w"> </span><span class="nv">SRC</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">DST</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">LEN</span><span class="o">=</span><span class="m">52</span><span class="w"> </span><span class="nv">TOS</span><span class="o">=</span>0x00<span class="w"> </span><span class="nv">PREC</span><span class="o">=</span>0x00<span class="w"> </span><span class="nv">TTL</span><span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="nv">ID</span><span class="o">=</span><span class="m">64473</span><span class="w"> </span>DF<span class="w"> </span><span class="nv">PROTO</span><span class="o">=</span>TCP<span class="w"> </span><span class="nv">SPT</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="nv">DPT</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">WINDOW</span><span class="o">=</span><span class="m">31</span><span class="w"> </span><span class="nv">RES</span><span class="o">=</span>0x00<span class="w"> </span>ACK<span class="w"> </span>FIN<span class="w"> </span><span class="nv">URGP</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>
+<span class="o">[</span>Sat<span class="w"> </span>Feb<span class="w">  </span><span class="m">4</span><span class="w"> </span><span class="m">16</span>:10:09<span class="w"> </span><span class="m">2023</span><span class="o">]</span><span class="w"> </span>ISTIO_OUTBOUND_INVALID:<span class="w"> </span><span class="nv">IN</span><span class="o">=</span><span class="w"> </span><span class="nv">OUT</span><span class="o">=</span>eth0<span class="w"> </span><span class="nv">SRC</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">DST</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">LEN</span><span class="o">=</span><span class="m">52</span><span class="w"> </span><span class="nv">TOS</span><span class="o">=</span>0x00<span class="w"> </span><span class="nv">PREC</span><span class="o">=</span>0x00<span class="w"> </span><span class="nv">TTL</span><span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="nv">ID</span><span class="o">=</span><span class="m">64474</span><span class="w"> </span>DF<span class="w"> </span><span class="nv">PROTO</span><span class="o">=</span>TCP<span class="w"> </span><span class="nv">SPT</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="nv">DPT</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">WINDOW</span><span class="o">=</span><span class="m">31</span><span class="w"> </span><span class="nv">RES</span><span class="o">=</span>0x00<span class="w"> </span>ACK<span class="w"> </span>FIN<span class="w"> </span><span class="nv">URGP</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>
+<span class="o">[</span>Sat<span class="w"> </span>Feb<span class="w">  </span><span class="m">4</span><span class="w"> </span><span class="m">16</span>:10:09<span class="w"> </span><span class="m">2023</span><span class="o">]</span><span class="w"> </span>ISTIO_OUTBOUND_INVALID:<span class="w"> </span><span class="nv">IN</span><span class="o">=</span><span class="w"> </span><span class="nv">OUT</span><span class="o">=</span>eth0<span class="w"> </span><span class="nv">SRC</span><span class="o">=</span><span class="m">172</span>.29.73.7<span class="w"> </span><span class="nv">DST</span><span class="o">=</span><span class="m">172</span>.21.206.198<span class="w"> </span><span class="nv">LEN</span><span class="o">=</span><span class="m">52</span><span class="w"> </span><span class="nv">TOS</span><span class="o">=</span>0x00<span class="w"> </span><span class="nv">PREC</span><span class="o">=</span>0x00<span class="w"> </span><span class="nv">TTL</span><span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="nv">ID</span><span class="o">=</span><span class="m">64475</span><span class="w"> </span>DF<span class="w"> </span><span class="nv">PROTO</span><span class="o">=</span>TCP<span class="w"> </span><span class="nv">SPT</span><span class="o">=</span><span class="m">44410</span><span class="w"> </span><span class="nv">DPT</span><span class="o">=</span><span class="m">7777</span><span class="w"> </span><span class="nv">WINDOW</span><span class="o">=</span><span class="m">31</span><span class="w"> </span><span class="nv">RES</span><span class="o">=</span>0x00<span class="w"> </span>ACK<span class="w"> </span>FIN<span class="w"> </span><span class="nv">URGP</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>
+...
+
+
+<span class="c1">## two half-open connections(leak):</span>
+Every<span class="w"> </span><span class="m">1</span>.0s:<span class="w"> </span>ss<span class="w"> </span>-naoep<span class="w"> </span><span class="p">|</span><span class="w"> </span>egrep<span class="w"> </span><span class="s1">&#39;44410|7777&#39;</span><span class="w">   </span>fortio-server-l2-0:<span class="w"> </span>Sat<span class="w"> </span>Feb<span class="w">  </span><span class="m">4</span><span class="w"> </span><span class="m">16</span>:19:42<span class="w"> </span><span class="m">2023</span>
+
+tcp<span class="w">   </span>CLOSE-WAIT<span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">172</span>.29.73.7:38072<span class="w">    </span><span class="m">172</span>.21.206.198:7777<span class="w">         </span>users:<span class="o">((</span><span class="s2">&quot;envoy&quot;</span>,pid<span class="o">=</span><span class="m">51435</span>,fd<span class="o">=</span><span class="m">135</span><span class="o">))</span><span class="w"> </span>uid:201507<span class="w"> </span>ino:2020910283<span class="w"> </span>sk:a8d07<span class="w"> </span>--&gt;
+tcp<span class="w">   </span>FIN-WAIT-2<span class="w">  </span><span class="m">0</span><span class="w">  </span><span class="m">0</span><span class="w">     </span><span class="m">127</span>.0.0.1:15001<span class="w">  </span><span class="m">172</span>.29.73.7:44410<span class="w">        </span>users:<span class="o">((</span><span class="s2">&quot;envoy&quot;</span>,pid<span class="o">=</span><span class="m">51435</span>,fd<span class="o">=</span><span class="m">121</span><span class="o">))</span><span class="w"> </span>uid:201507<span class="w"> </span>ino:2020910282<span class="w"> </span>sk:a8d09<span class="w"> </span>&lt;--
+</pre></div>
+</div>
+<p>After timeout, socket <code class="docutils literal notranslate"><span class="pre">LAST-ACK</span> <span class="pre">172.29.73.7:44410</span>&#160; <span class="pre">172.21.206.198:7777</span> <span class="pre">(own</span> <span class="pre">by</span> <span class="pre">nc)</span></code> will be closed and:</p>
+<ul class="simple">
+<li><p>socket <code class="docutils literal notranslate"><span class="pre">FIN-WAIT-2</span> <span class="pre">127.0.0.1:15001</span>&#160;&#160; <span class="pre">172.29.73.7:44410</span>&#160;&#160; <span class="pre">users:((&quot;envoy&quot;))</span></code> which from sidecar to App leaked.</p></li>
+<li><p>socket <code class="docutils literal notranslate"><span class="pre">CLOSE-WAIT</span> <span class="pre">172.29.73.7:38072</span>&#160; <span class="pre">172.21.206.198:7777</span>&#160; <span class="pre">users:((&quot;envoy&quot;))</span></code>  which from sidecar to upstream service leaked.</p></li>
+<li><p>Ephemeral port 44410 can be reused by new socket connection to 172.21.206.198:7777 .</p>
+<ul>
+<li><p>When App create new connection and randomly selects the collision ephemeral port(44410) to connect any upstream service(including TCP/HTTP service), a <code class="docutils literal notranslate"><span class="pre">connect</span> <span class="pre">timed</span> <span class="pre">out</span></code> issue may be happen. Because of conntrack TCP window check and mark the RST response to <code class="docutils literal notranslate"><span class="pre">Challenge</span> <span class="pre">ACK</span></code> as  <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> and wil not delivery to Envoy. I will explain why later.</p></li>
+</ul>
+</li>
+</ul>
+<p>Good news is:<code class="docutils literal notranslate"><span class="pre">Envoy</span> <span class="pre">TCPProxy</span> <span class="pre">Filter</span></code> has an <a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto"><code class="docutils literal notranslate"><span class="pre">idle_timeout</span></code></a> setting which by default is 1 hour. So above problem will have a 1 hour leak window before being GC.</p>
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

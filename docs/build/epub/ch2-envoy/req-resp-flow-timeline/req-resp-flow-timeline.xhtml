@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Envoy 请求与响应调度</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="envoy">
+<h1>Envoy 请求与响应调度</h1>
+<p>🎤 正式开编前。想说说写本节的一些故事缘由。为何去研究 Envoy 的请求与响应调度？</p>
+<p>缘起于一个客户需求，需要对 Istio 网格节点故障快速恢复做一些调研。为此，我翻阅了大量的 Istio/Envoy 文档、大咖 Blog。看了很多很杂乱的信息：</p>
+<ul class="simple">
+<li><p>健康检测</p></li>
+<li><p>熔断</p></li>
+<li><p>Envoy 中的各个神秘又关系千丝万缕的 timeout 配置</p></li>
+<li><p>请求 Retry</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TCP</span> <span class="pre">keepalive</span></code>、<code class="docutils literal notranslate"><span class="pre">TCP_USER_TIMEOUT</span></code> 配置</p></li>
+</ul>
+<p>杂乱到最后，我不得不写个文章去梳理一下信息：<a class="reference external" href="https://blog.mygraphql.com/zh/posts/low-tec/network/tcp-close/tcp-half-open/">Istio 网格节点故障快速恢复初探</a> 。 但信息是梳理了，基础原理却没理顺。于是，我下决心去钻研一下 Envoy 的文档。是的，其实 Envoy 的文档已经写得比较细致。只是：</p>
+<ul class="simple">
+<li><p>信息散落在一个个网页中，无法用时序和流程的方法组织起来，构成一个有机的整体。</p></li>
+<li><p>不去了解这个整体协作关系，只是一个一个参数分开来看，是无法理性去权衡这些参数的。</p></li>
+<li><p>指标与指标，指标与参数，关系复杂</p></li>
+<li><p>而上面的关系，都可以通过请求与响应调度流程串联起来</p></li>
+</ul>
+<p>基于上面原因。我从文档、参数、指标推导出以下流程。<mark>注意：暂时未在代码中验证，请谨慎参考。</mark></p>
+<section id="id1">
+<h2>请求与响应调度</h2>
+<p>本质上说，Envoy 就是一个代理。说起代理，第一反应应该是有以下流程的软件/硬件：</p>
+<ol class="arabic simple">
+<li><p>接收来自 <code class="docutils literal notranslate"><span class="pre">downstream</span></code> 的 <code class="docutils literal notranslate"><span class="pre">Request</span></code></p></li>
+<li><p>做一些逻辑，必要时修改 <code class="docutils literal notranslate"><span class="pre">Request</span></code> ，并判定<code class="docutils literal notranslate"><span class="pre">upstream</span></code>目的地</p></li>
+<li><p>转发（修改后）的 <code class="docutils literal notranslate"><span class="pre">Request</span></code> 到<code class="docutils literal notranslate"><span class="pre">upstream</span></code></p></li>
+<li><p>如果协议是一个 <code class="docutils literal notranslate"><span class="pre">Request</span></code> &amp; <code class="docutils literal notranslate"><span class="pre">Response</span></code> 式的协议（如 HTTP）</p>
+<ol class="arabic simple">
+<li><p>代理通常会接收<code class="docutils literal notranslate"><span class="pre">upstream</span></code>的<code class="docutils literal notranslate"><span class="pre">Response</span></code></p></li>
+<li><p>做一些逻辑，必要时修改 <code class="docutils literal notranslate"><span class="pre">Response</span></code></p></li>
+<li><p>转发 <code class="docutils literal notranslate"><span class="pre">Response</span></code> 给 <code class="docutils literal notranslate"><span class="pre">downstream</span></code></p></li>
+</ol>
+</li>
+</ol>
+<p>的确，这也是 Envoy 代理 HTTP 协议的概要流程。但 Envoy 还要实现很多特性：</p>
+<ol class="arabic simple">
+<li><p>高效的 <code class="docutils literal notranslate"><span class="pre">downstream</span></code> / <code class="docutils literal notranslate"><span class="pre">upstream</span></code> 传输 ➡️ 需要<code class="docutils literal notranslate"><span class="pre">连接复用</span></code>与<code class="docutils literal notranslate"><span class="pre">连接池</span></code></p></li>
+<li><p>灵活配置的转发目标服务策略 ➡️ 需要 <code class="docutils literal notranslate"><span class="pre">Router</span></code>配置策略与实现逻辑</p></li>
+<li><p>弹性服务 (resilient micro-services)</p>
+<ol class="arabic simple">
+<li><p>负载均衡</p></li>
+<li><p>突发流量的削峰平谷 ➡️ 请求排队： pending request</p></li>
+<li><p>应对异常 upstream、熔断器、保护服务不雪崩 ➡️ 各种 timeout 配置、 Health checking 、 Outlier detection 、 Circuit breaking</p></li>
+<li><p>弹性重试 ➡️ retry</p></li>
+</ol>
+</li>
+<li><p>可观察性 ➡️ 无处不在的性能指标</p></li>
+<li><p>动态编程配置接口 ➡️ xDS: EDS/LDS/…</p></li>
+</ol>
+<p>要实现这些特性，请求与响应的流程自然不可能简单。</p>
+<div class="admonition hint">
+<p class="admonition-title">提示</p>
+<p>看到这里，读者可能有疑问，本节的标题叫 “请求与响应调度” ？ 难道 Envoy 需要类似 Linux Kernel 调度线程一样，去调度处理 Request 吗？</p>
+<p>对的，你说到点上了。</p>
+</div>
+<p>Envoy 应用了 <code class="docutils literal notranslate"><span class="pre">事件驱动</span></code> 设计模式。<code class="docutils literal notranslate"><span class="pre">事件驱动</span></code> 的程序，相对于 <code class="docutils literal notranslate"><span class="pre">非事件驱动</span></code> 的程序，可以用更少的线程，更灵活地控制在什么时候做什么任务，即更灵活的调度逻辑。且更绝的是：由于线程间共享的数据不多，线程的数据并发控制同时被大大简化。</p>
+<p>在本节中，事件类型最少有：</p>
+<ul class="simple">
+<li><p>外部的网络可读、可写、连接关闭事件</p></li>
+<li><p>各类定时器</p>
+<ul>
+<li><p>重试定时</p></li>
+<li><p>各种超时配置定时</p></li>
+</ul>
+</li>
+</ul>
+<p>由于使用了无限的请求分配到有限的线程的模式，加上请求可能需要重试，所以线程一定要有一系列的逻辑，来 “排序” 什么请求应该先处理。什么请求由于 <code class="docutils literal notranslate"><span class="pre">超时</span></code> 或资源使用 <code class="docutils literal notranslate"><span class="pre">超过配置上限</span></code> 而应立即返回失败。</p>
+<p>按本书的习惯，先上图。后面，对这个图一步步展开和说明。</p>
+<div class="admonition hint">
+<p class="admonition-title">提示</p>
+<p>互动图书：</p>
+<ul class="simple">
+<li><p>建议用 Draw.io 打开。图中包含大量的链接，链接到每一个组件、配置项、指标的文档说明。</p></li>
+<li><p>双屏，一屏看图，一屏看文档，是本书的正确阅读姿势。如果你在用手机看，那么，忽略我吧 🤦</p></li>
+</ul>
+</div>
+<figure class="full-width align-default" id="envoy-http1">
+<img alt="图：Envoy HTTP1 请求与响应调度" src="../../_images/req-resp-flow-timeline-schedule.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy HTTP1 请求与响应调度</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Freq-resp-flow-timeline-schedule.drawio.svg">用 Draw.io 打开</a></em></p>
+<figure class="full-width align-default" id="envoy-http-2">
+<img alt="图：Envoy HTTP/2 请求与响应调度" src="../../_images/life-of-a-request-overview-h2.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy HTTP/2 请求与响应调度</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Flife-of-a-request-overview-h2.drawio.svg">用 Draw.io 打开</a></em></p>
+<section id="id2">
+<h3>相关组件</h3>
+<p>上图尝试说明 <code class="docutils literal notranslate"><span class="pre">Envoy</span> <span class="pre">请求与响应调度</span> </code> 过程，以及串联相关的组件。其中可以看到一些组件：</p>
+<ul class="simple">
+<li><p>Listener - 应答 downstream 连接请求</p></li>
+<li><p>HTTP Connection Manager(HCM) - HTTP 的核心组件，推动 http 流的读取、解释、路由(Router)</p></li>
+<li><p>HCM-router - HTTP 路由核心组件，职责是:</p>
+<ul>
+<li><p>判定 HTTP 下一跳的目标 cluster，即 upstream cluster</p></li>
+<li><p>重试</p></li>
+</ul>
+</li>
+<li><p>Load balancing - upstream cluster 内的负载均衡</p></li>
+<li><p>pending request queue - <code class="docutils literal notranslate"><span class="pre">等待连接池可用连接的请求队列</span></code></p></li>
+<li><p>requests bind to connection - 已经分配到连接的请求</p></li>
+<li><p>connection pool - worker 线程与 upstream host 专用的连接池</p></li>
+<li><p>health checker/Outlier detection - upstream host 健康监视，发现异常 host 并隔离。</p></li>
+</ul>
+<p>和一些  <code class="docutils literal notranslate"><span class="pre">Circuit</span> <span class="pre">breaking(熔断开关)</span> </code>上限条件：</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">max_retries</span></code> - 最大重试并发上限</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_pending_requests</span></code> -  <code class="docutils literal notranslate"><span class="pre">pending</span> <span class="pre">request</span> <span class="pre">queue</span></code> 的队列上限</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_request</span></code> - 最大并发请求数上限</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_connections</span></code> - upstream cluster 的最大连接上限</p></li>
+</ul>
+<p>需要注意的是，上面的参数是对于整个 upstream cluster 的，即是所有 worker thread、upstream host 汇总的上限。</p>
+</section>
+<section id="id3">
+<h3>相关的监控指标</h3>
+<p>我们用类似著名的 <a class="reference external" href="https://www.brendangregg.com/usemethod.html">Utilization Saturation and Errors (USE)</a> 方法学来分类指标。</p>
+<p>资源过载型的指标：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.envoyproxy.io/docs/envoy/v1.15.2/configuration/listeners/stats#listener:~:text=downstream_cx_overflow">downstream_cx_overflow</a></p></li>
+<li><p>upstream_rq_retry_overflow</p></li>
+<li><p>upstream_rq_pending_overflow</p></li>
+<li><p>upstream_cx_overflow</p></li>
+</ul>
+<p>资源饱和度指标：</p>
+<ul class="simple">
+<li><p>upstream_rq_pending_active</p></li>
+<li><p>upstream_rq_pending_total</p></li>
+<li><p>upstream_rq_active</p></li>
+</ul>
+<p>错误型的指标：</p>
+<ul class="simple">
+<li><p>upstream_rq_retry</p></li>
+<li><p>ejections_acive</p></li>
+<li><p>ejections_*</p></li>
+<li><p>ssl.connection_error</p></li>
+</ul>
+<p>信息型的指标：</p>
+<ul class="simple">
+<li><p>upstream_cx_total</p></li>
+<li><p>upstream_cx_active</p></li>
+<li><p>upstream_cx_http*_total</p></li>
+</ul>
+<p>由于图中已经说明了指标、组件、配置项的关系，这里就不再文字叙述了。图中也提供了到指标文档和相关配置的链接。</p>
+</section>
+<section id="id4">
+<h3>Envoy 请求调度流程</h3>
+<p>先说说请求组件流转部分，流程图可以从相关的文档推理为（未完全验证，存在部分推理）：</p>
+<figure class="full-width align-default" id="id5">
+<img alt="图：Envoy HTTP1 请求与响应时序线" src="../../_images/req-resp-flow-timeline-flowchart.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy HTTP1 请求调度流程图</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Freq-resp-flow-timeline-flowchart.drawio.svg">用 Draw.io 打开</a></em></p>
+<figure class="full-width align-default" id="id6">
+<img alt="图：Envoy HTTP/2 请求与响应时序线" src="../../_images/req-resp-flow-timeline-flowchart-h2.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy HTTP/2 请求调度流程图</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Freq-resp-flow-timeline-flowchart-h2.drawio.svg">用 Draw.io 打开</a></em></p>
+</section>
+</section>
+<section id="id7">
+<h2>请求与响应调度时序线</h2>
+<p>本节开头说了，写本节的直接缘由是: 需要对 Istio 网格节点故障快速恢复做一些调研。<code class="docutils literal notranslate"><span class="pre">快速恢复</span></code> 的前提是：</p>
+<ul class="simple">
+<li><p>对已经发送到 <code class="docutils literal notranslate"><span class="pre">故障</span> <span class="pre">upstream</span> <span class="pre">host</span></code> 或绑定到 <code class="docutils literal notranslate"><span class="pre">故障</span> <span class="pre">upstream</span> <span class="pre">host</span></code> 的请求，快速响应失败</p></li>
+<li><p>用 <code class="docutils literal notranslate"><span class="pre">Outlier</span> <span class="pre">detection</span> <span class="pre">/</span> <span class="pre">health</span> <span class="pre">checker</span></code>  识别出   <code class="docutils literal notranslate"><span class="pre">故障</span> <span class="pre">upstream</span> <span class="pre">host</span></code> ，并把它移出负载均衡列表</p></li>
+</ul>
+<p>所有问题都依赖于一个问题：如何定义和发现 <code class="docutils literal notranslate"><span class="pre">upstream</span> <span class="pre">host</span></code> 出了故障？</p>
+<ul class="simple">
+<li><p>网络分区或对端崩溃或负载过高</p>
+<ul>
+<li><p>大多数情况下，分布式系统只能通过超时来发现这种问题。所以，要快速发现 <code class="docutils literal notranslate"><span class="pre">故障</span> <span class="pre">upstream</span> <span class="pre">host</span></code> 或 <code class="docutils literal notranslate"><span class="pre">故障</span> <span class="pre">request</span></code> ，需要配置合理的 timeout</p></li>
+</ul>
+</li>
+<li><p>对端有响应，L7 层的失败（如 HTTP 500），或 L3 层的失败（如 TCP REST/No router to destination/ICMP error）</p>
+<ul>
+<li><p>这是可以快速发现的失败</p></li>
+</ul>
+</li>
+</ul>
+<p>对于 <code class="docutils literal notranslate"><span class="pre">网络分区或对端崩溃或负载过高</span></code>，需要 timeout 发现的情况，Envoy 提供了丰富的 timeout 配置。丰富到有时让人不知道应该用哪个才是合理的。甚至配置一不小心，就配置出一些逻辑上长短与实现设计矛盾的值。所以，我尝试理清楚 <code class="docutils literal notranslate"><span class="pre">请求与响应调度时序线</span></code> ，然后看相关 timeout 配置关联到这个时间线的哪个点，那么整个逻辑就清楚了。配置也更容易合理化了。</p>
+<p>下图是请求与响应的时序线，以及相关的 timeout 配置与产生的指标，以及它们的联系。</p>
+<figure class="full-width align-default" id="id8">
+<img alt="图：Envoy 请求与响应时序线" src="../../_images/req-resp-flow-timeline.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy 请求与响应时序线</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Freq-resp-flow-timeline.drawio.svg">用 Draw.io 打开</a></em></p>
+<p>简单说明一下时间线：</p>
+<ol class="arabic simple">
+<li><p>如果 downstream 复用了之前的连接，可以跳过 2 &amp; 3</p></li>
+<li><p>downstream发起 新连接(TCP 握手)</p></li>
+<li><p>TLS 握手</p></li>
+<li><p>Envoy 接收 downstream request header &amp; body</p></li>
+<li><p>Envoy 执行路由(Router)规则，判定下一跳的 upstream cluster</p></li>
+<li><p>Envoy 执行 Load Balancing 算法 ，判定下一跳的 upstream cluster 的 upstream host</p></li>
+<li><p>如果 Envoy 已经有空闲连接到 upstream host，则跳过 8 &amp; 9</p></li>
+<li><p>Envoy 向 upstream host 发起新连接(TCP 握手)</p></li>
+<li><p>Envoy 向 upstream host 发起TLS 握手</p></li>
+<li><p>Envoy 向 upstream host 转发送 request header &amp; body</p></li>
+<li><p>Envoy 接收 upstream host 响应的 response header &amp; body</p></li>
+<li><p>upstream host 连接开始 idle</p></li>
+<li><p>Envoy 向 downstream 转发送 response header &amp; body</p></li>
+<li><p>downstream host 连接开始 idle</p></li>
+</ol>
+<p>相应地，图中也标注了相关超时配置与时间线步骤的关系，从开始计时顺序排列如下</p>
+<ul>
+<li><p>max_connection_duration</p></li>
+<li><p>transport_socket_connect_timeout</p>
+<ul class="simple">
+<li><p>指标 <code class="docutils literal notranslate"><span class="pre">listener.downstream_cx_transport_socket_connect_timeout</span></code></p></li>
+</ul>
+</li>
+<li><p>request_headers_timeout</p></li>
+<li><p>requst_timeout</p></li>
+<li><p>Envoy 的 route.timeout 即 Istio 的 <a class="reference external" href="https://istio.io/latest/docs/tasks/traffic-management/request-timeouts/"><code class="docutils literal notranslate"><span class="pre">Istio</span> <span class="pre">request</span> <span class="pre">timeout(outbound)</span></code></a></p>
+<p>注意，这个超时值是把 请求处理时实际的 retry 的总时间也算上的。</p>
+<ul class="simple">
+<li><p>指标 <code class="docutils literal notranslate"><span class="pre">cluster.upstream_rq_timeout</span></code></p></li>
+<li><p>指标 <code class="docutils literal notranslate"><span class="pre">vhost.vcluster.upstream_rq_timeout</span></code></p></li>
+</ul>
+</li>
+<li><p>max_connection_duration</p></li>
+<li><p>connection_timeout</p>
+<ul class="simple">
+<li><p>指标 <code class="docutils literal notranslate"><span class="pre">upstream_cx_connect_timeout</span></code></p></li>
+</ul>
+</li>
+<li><p>transport_socket_connect_timeout</p></li>
+<li><p>httpprotocoloptions.idle_timeout</p></li>
+</ul>
+</section>
+<section id="id9">
+<h2>总结</h2>
+<p>想要 Envoy 在压力与异常情况下，有个比较符合预期的表现，需要给 Envoy 一些合理于具体应用环境与场景的配置。而要配置好这堆参数的前提，是对相关处理流程与逻辑的洞察。 上面把 <code class="docutils literal notranslate"><span class="pre">请求与响应调度</span></code> 与 <code class="docutils literal notranslate"><span class="pre">请求与响应调度时序线</span></code>  都过了一遍。希望对了解这些方面有一定的帮助。</p>
+<p>不只是 Envoy ，其实所有做代理的中间件，可能最核心的东西都在这一块了。所以，不要期望一下把知识完全吃透。这里，也只是希望让读者在这些流程上，有一个线索，然后通过线索去学习，方可不迷失方向。</p>
+</section>
+<section id="id10">
+<h2>一些有趣的扩展阅读</h2>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference external" href="https://www.istioworkshop.io/09-traffic-management/06-circuit-breaker/">https://www.istioworkshop.io/09-traffic-management/06-circuit-breaker/</a></p></li>
+<li><p><a class="reference external" href="https://tech.olx.com/demystifying-istio-circuit-breaking-27a69cac2ce4">https://tech.olx.com/demystifying-istio-circuit-breaking-27a69cac2ce4</a></p></li>
+<li><p><a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts">https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts</a></p></li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

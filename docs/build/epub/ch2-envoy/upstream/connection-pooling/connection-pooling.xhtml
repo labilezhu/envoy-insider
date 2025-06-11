@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>连接池</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>连接池</h1>
+<p><code class="docutils literal notranslate"><span class="pre">Connection</span> <span class="pre">Pool</span></code> 使用连接重用等机制，提高了到同一 <code class="docutils literal notranslate"><span class="pre">upstream</span> <span class="pre">cluster</span></code> 下的同一 <code class="docutils literal notranslate"><span class="pre">upstream</span> <span class="pre">endpoint</span></code> 的连接建立效率。</p>
+<section id="tcp-proxy">
+<h2>TCP Proxy 连接池</h2>
+<p>为让读者更容易理解连接池，以下先以相对比较简单的 <code class="docutils literal notranslate"><span class="pre">TCP</span> <span class="pre">Proxy</span> <span class="pre">连接池</span></code> 来说明连接池的设计。</p>
+<section id="id2">
+<h3>TCP Proxy 连接池概述</h3>
+<p>首先概述一下 <code class="docutils literal notranslate"><span class="pre">Cluster</span> <span class="pre">Manager</span></code> / <code class="docutils literal notranslate"><span class="pre">Load</span> <span class="pre">Balancer</span></code> / <code class="docutils literal notranslate"><span class="pre">Connection</span> <span class="pre">Pool</span></code>  / <code class="docutils literal notranslate"><span class="pre">Network</span> <span class="pre">Filter</span></code> 的模块协作：</p>
+<figure class="full-width align-default" id="envoy-tcp-proxy-connection-pool-at-high-level">
+<img alt="图：Envoy TCP Proxy connection pool at high level" src="../../../_images/connection-pooling-high-level.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy TCP Proxy connection pool at high level</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fconnection-pooling-high-level.drawio.svg">用 Draw.io 打开</a></em></p>
+<p>可见，每一个 downstream / upstream pair (<code class="docutils literal notranslate"><span class="pre">Downstream-Upstream-Bundle</span></code>) 均创建专用的，只有一个有效 upstream connection 的 connection pool 。原因是 TCP Proxy 的 upstream 连接不能重用(reuse)。</p>
+</section>
+<section id="id3">
+<h3>TCP Proxy 连接池详述</h3>
+<p>再在 Class 层，看看 <code class="docutils literal notranslate"><span class="pre">Cluster</span> <span class="pre">Manager</span></code> / <code class="docutils literal notranslate"><span class="pre">Load</span> <span class="pre">Balancer</span></code> / <code class="docutils literal notranslate"><span class="pre">Connection</span> <span class="pre">Pool</span></code>  / <code class="docutils literal notranslate"><span class="pre">Network</span> <span class="pre">Filter</span></code> 的模块协作：</p>
+<figure class="full-width align-default" id="envoy-tcp-proxy-connection-pool-at-class-level">
+<img alt="图：Envoy TCP Proxy connection pool at class level" src="../../../_images/connection-pooling.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy TCP Proxy connection pool at class level</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fconnection-pooling.drawio.svg">用 Draw.io 打开</a></em></p>
+</section>
+</section>
+<section id="http">
+<h2>HTTP 连接池</h2>
+<p>//TODO</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

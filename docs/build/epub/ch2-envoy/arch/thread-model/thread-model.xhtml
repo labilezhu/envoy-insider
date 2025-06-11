@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>线程模型</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>线程模型</h1>
+<p>如果给你一个开源中间件，要你分析其实现，那么，你会从什么地方入手？回答可能是：</p>
+<ul class="simple">
+<li><p>源码模块</p></li>
+<li><p>抽象概念与设计模式</p></li>
+<li><p>线程</p></li>
+</ul>
+<p>对于现代开源中间件，我觉得线程/进程模型几乎是最重要的。因为现代中间件基本都使用了多进程或多线程以充分利用硬件资源。无论封装抽象得再好，设计模式应用得再优雅，程序终究要以线程的方式在 cpu 上面跑。而多线程是如何按职能划分的，线程之间如何同步通讯，这些东西才是难点和重点。</p>
+<p>简单来说，Envoy 使用了 non-blocking + Event Driven + Multi-Worker-Thread 的线程设计模式。在软件设计史上，类似的设计模式的名称有很多，如：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/Staged_event-driven_architecture">staged event-driven architecture (SEDA)</a></p></li>
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/Reactor_pattern">Reactor pattern</a></p></li>
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/Event-driven_architecture">Event-driven architecture (EDA)</a></p></li>
+</ul>
+<blockquote>
+<div><p>本节内容假设读者已经了解过 Envoy 的事件驱动模型。如果未有，可以阅读本书的 <a class="reference internal" href="../event-driven/event-driven.xhtml"><span class="doc">事件驱动</span></a>。
+本节内容参考了：<a class="reference external" href="https://blog.envoyproxy.io/envoy-threading-model-a8d44b922310">Envoy threading model - Matt Klein</a></p>
+</div></blockquote>
+<p>与 Node.JS 的单线程不同，Envoy 为了充分利用多 Core CPU 的优势，支持多个 Worker Thread 各自跑自己独立的 event loop。而这样的设计是有代价的，因为多个 worker thread / main thread 之间其实不是完全独立的，他们需要共享一些数据，如：</p>
+<ul class="simple">
+<li><p>Upstream Cluster 的 endpoints 、健康状态……</p></li>
+<li><p>各种监控统计指标</p></li>
+</ul>
+<section id="id2">
+<h2>线程概述</h2>
+<p><img alt="image-20240506232521005" src="../../../_images/threading-overview.png" /></p>
+<p><em>图 : Threading overview</em></p>
+<p><em>Source: <a class="reference external" href="https://blog.envoyproxy.io/envoy-threading-model-a8d44b922310">Envoy threading model - Matt Klein</a></em></p>
+<p>Envoy 使用几种不同类型的线程，如上图所示。下面选择主要的说明：</p>
+<ul class="simple">
+<li><p>main：该线程负责服务器启动和关闭、所有 xDS API 处理（包括 DNS、健康检查和通用cluster management）、runtime、stat flushing、admin 和一般进程管理（signals、热重启等）。该线程上发生的一切都是异步和 “非阻塞 “的。一般来说，main 线程负责协调所有不需要大量 CPU 来完成的关键功能。这样，大部分管理代码就可以像单线程一样编写。</p></li>
+<li><p>worker： 默认情况下，Envoy 会为系统中的每个硬件线程生成一个工作线程。(这可通过 –concurrency 选项控制）。每个 worker 线程运行一个 “非阻塞 “事件循环，负责监听每个 listener、接受新连接、为连接实例化一个 filter 栈，并在连接生命周期内处理所有 IO。这样，大部分连接处理代码就可以像单线程代码一样编写。</p></li>
+</ul>
+</section>
+<section id="thread-local">
+<h2>Thread Local</h2>
+<p>由于 Envoy 将 main 线程职责与 worker 线程职责分开，因此需要在 main 线程上完成复杂处理，然后以高度并发的方式提供给每个 worker 线程。本节将从高层介绍 Envoy 的线程本地存储 Thread Local Storage (TLS) 系统。后面我将介绍如何使用该系统处理 cluster management 。</p>
+<p><img alt="image-20240506233017636" src="../../../_images/thread-local-storage-system.png" /></p>
+<p><em>Source: <a class="reference external" href="https://blog.envoyproxy.io/envoy-threading-model-a8d44b922310">Envoy threading model - Matt Klein</a></em></p>
+<p><em>Figure : Thread Local Storage (TLS) system</em></p>
+<p><img alt="image-20240506233250458" src="../../../_images/cluster-manager-threading.png" /></p>
+<p><em>Source: <a class="reference external" href="https://blog.envoyproxy.io/envoy-threading-model-a8d44b922310">Envoy threading model - Matt Klein</a></em></p>
+<p><em>Figure : Cluster manager threading</em></p>
+<p>共享的数据，如果都是加锁写读访问，并发度一定会下降。于是 Envoy 作者在分析数据同步更新的实时一致性要求不高的条件下，参考了 Linux kernel 的 <a class="reference external" href="https://en.wikipedia.org/wiki/Read-copy-update">read-copy-update (RCU)</a> 设计模式，实现了一套 Thread Local 的数据同步机制。在底层实现上，是基于 C++11 的 <code class="docutils literal notranslate"><span class="pre">thread_local</span></code> 功能，和 libevent 的 <code class="docutils literal notranslate"><span class="pre">libevent::event_active(&amp;raw_event_,</span> <span class="pre">EV_TIMEOUT,</span> <span class="pre">0)</span></code> 去实现。</p>
+<p>下图在 <a class="reference external" href="https://blog.envoyproxy.io/envoy-threading-model-a8d44b922310">Envoy threading model - Matt Klein</a> 基础上，尝试以 Cluster Manager 为例，说明 Envoy 在源码实现层面，是如何使用 Thread Local 机制实现 thread 之间共享数据的。</p>
+<figure class="align-default" id="threadlocal-classes">
+<img alt="图 - ThreadLocal Classes" src="../../../_images/thread-local-classes.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图: ThreadLocal Classes</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fthread-local-classes.drawio.svg">用 Draw.io 打开</a></em></p>
+<p>上图可以简述如下：</p>
+<ol class="arabic simple">
+<li><p>main 线程 初始化 <code class="docutils literal notranslate"><span class="pre">ThreadLocal::InstanceImpl</span></code> 以及每个 <code class="docutils literal notranslate"><span class="pre">Dispatcher</span></code> 注册到 <code class="docutils literal notranslate"><span class="pre">ThreadLocal::InstanceImpl</span></code></p></li>
+<li><p>main 线程 通知所有 worker 线程创建本地的 <code class="docutils literal notranslate"><span class="pre">ThreadLocalClusterManagerImpl</span></code></p></li>
+<li><p>main 线程感知到一个 Cluster 被删除时，通知各个 worker 线程的 <code class="docutils literal notranslate"><span class="pre">ThreadLocalClusterManagerImpl</span></code>  删除这个 Cluster</p></li>
+<li><p>worker 线程上的 <code class="docutils literal notranslate"><span class="pre">TCPProxy</span></code> 尝试连接一个 <code class="docutils literal notranslate"><span class="pre">OnDemand</span> <span class="pre">Cluster(未知的</span> <span class="pre">cluster）</span></code> 时，获取线程本地的  <code class="docutils literal notranslate"><span class="pre">ThreadLocalClusterManagerImpl</span></code></p></li>
+</ol>
+</section>
+<section id="ref">
+<h2>Ref</h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://blog.envoyproxy.io/envoy-threading-model-a8d44b922310">Envoy threading model - Matt Klein</a></p></li>
+</ul>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

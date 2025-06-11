@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Istio 与 Envoy 指标概述</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="istio-envoy">
+<h1>Istio 与 Envoy 指标概述</h1>
+<p>Istio 的 istio-proxy 的数据面指标是 基于 Envoy 的指标构架实现的。所以，后面我将先说 Envoy 的指标架构。</p>
+<div class="admonition hint">
+<p class="admonition-title">提示</p>
+<p>如果你和我一样，是个急性子。那么下图就是 Istio &amp; Envoy 的指标地图了。它说明了指标产生在什么地方。后面内容会一步步推导出这个地图。</p>
+</div>
+<figure class="align-default" id="envoy-istio">
+<img alt="Inbound与Outbound概念" src="../../_images/envoy-istio-metrics.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy&#64;Istio的指标</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fenvoy-istio-metrics.drawio.svg">用 Draw.io 打开</a></em></p>
+<figure class="full-width align-default" id="id1">
+<img alt="图：Envoy 请求与响应时序线上的指标" src="../../_images/req-resp-flow-timeline.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy 请求与响应时序线上的指标</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Freq-resp-flow-timeline.drawio.svg">用 Draw.io 打开</a></em></p>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

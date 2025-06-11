@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>HTTP 连接生命周期管理</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="http">
+<h1>HTTP 连接生命周期管理</h1>
+<section id="upstream-downstream">
+<h2>Upstream/Downstream 连接解藕</h2>
+<blockquote>
+<div><p>HTTP/1.1 规范有这个设计：
+HTTP Proxy 是 L7 层的代理，应该和 L3/L4 层的连接生命周期分开。</p>
+</div></blockquote>
+<p>所以，像从 Downstream 来的 <code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">Close</span></code> 、 <code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">Keepalive</span></code> 这种 Header， Envoy 不会 Forward 到 Upstream 。 Downstream 连接的生命周期，当然会遵从 <code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">xyz</span></code> 的指示控制。但 Upstream 的连接生命周期不会被 Downstream 的连接生命周期影响。 即，这是两个独立的连接生命周期管理。</p>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/envoyproxy/envoy/issues/15788#issuecomment-811429722">Github Issue: HTTP filter before and after evaluation of Connection: Close header sent by upstream#15788</a> 说明了这个问题：
+This doesn’t make sense in the context of Envoy, where downstream and upstream are decoupled and can use different protocols. I’m still not completely understanding the actual problem you are trying to solve?</p>
+</div></blockquote>
+</section>
+<section id="id1">
+<h2>连接超时相关配置参数</h2>
+<figure class="full-width align-default" id="id2">
+<img alt="图：Envoy 连接 timeout 时序线" src="../../_images/req-resp-flow-timeline.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图：Envoy 连接 timeout 时序线</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Freq-resp-flow-timeline.drawio.svg">用 Draw.io 打开</a></em></p>
+<section id="idle-timeout">
+<h3>idle_timeout</h3>
+<p>(Duration) The idle timeout for connections. The idle timeout is defined as the period in which there are no active requests. When the idle timeout is reached the connection will be closed. If the connection is an HTTP/2 downstream connection a drain sequence will occur prior to closing the connection, see <a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-drain-timeout">drain_timeout</a>. Note that request based timeouts mean that HTTP/2 PINGs will not keep the connection alive. If not specified, this defaults to <strong>1 hour.</strong> To disable idle timeouts explicitly set this to 0.</p>
+<blockquote>
+<div><p>Warning</p>
+<p>Disabling this timeout has a highly likelihood of yielding connection leaks due to lost TCP FIN packets, etc.</p>
+</div></blockquote>
+<p>If the <a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/overload_manager/overload_manager#config-overload-manager-overload-actions">overload action</a> “envoy.overload_actions.reduce_timeouts” is configured, this timeout is scaled for downstream connections according to the value for <a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/overload/v3/overload.proto#envoy-v3-api-enum-value-config-overload-v3-scaletimersoverloadactionconfig-timertype-http-downstream-connection-idle">HTTP_DOWNSTREAM_CONNECTION_IDLE</a>.</p>
+</section>
+<section id="max-connection-duration">
+<h3>max_connection_duration</h3>
+<p>(Duration) The maximum duration of a connection. The duration is defined as a period since a connection was established. If not set, there is no max duration. When <code class="docutils literal notranslate"><span class="pre">max_connection_duration</span></code> is reached and if there are no active streams, the connection will be closed. If the connection is a downstream connection and there are any active streams, the <code class="docutils literal notranslate"><span class="pre">drain</span> <span class="pre">sequence</span></code> will kick-in, and the connection will be force-closed after the drain period. See <a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-drain-timeout">drain_timeout</a>.</p>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/envoyproxy/envoy/issues/8302">Github Issue: http: Allow upper bounding lifetime of downstream connections #8302</a></p>
+<p><a class="reference external" href="https://github.com/envoyproxy/envoy/pull/8591">Github PR: add <code class="docutils literal notranslate"><span class="pre">max_connection_duration</span></code>: http conn man: allow to upper-bound downstream connection lifetime. #8591</a></p>
+<p><a class="reference external" href="https://github.com/envoyproxy/envoy/pull/17932">Github PR: upstream: support max connection duration for upstream HTTP connections #17932</a></p>
+</div></blockquote>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/envoyproxy/envoy/issues/14910#issuecomment-773434342">Github Issue: Forward Connection:Close header to downstream#14910</a>
+For HTTP/1, Envoy will send a <code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">close</span></code> header after <code class="docutils literal notranslate"><span class="pre">max_connection_duration</span></code> if another request comes in. If not, after some period of time, it will just close the connection.</p>
+<p>https://github.com/envoyproxy/envoy/issues/14910#issuecomment-773434342</p>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">max_requests_per_connection</span></code> isn’t (yet) implemented/supported for downstream connections.</p>
+<p>For HTTP/1, Envoy will send a <code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">close</span></code> header after <code class="docutils literal notranslate"><span class="pre">max_connection_duration</span></code> （且在 <code class="docutils literal notranslate"><span class="pre">drain_timeout</span></code> 前） if another request comes in. If not, after some period of time, it will just close the connection.</p>
+<p>I don’t know what your downstream LB is going to do, but note that according to the spec, the <code class="docutils literal notranslate"><span class="pre">Connection</span></code> header is hop-by-hop for HTTP proxies.</p>
+</div></blockquote>
+</section>
+<section id="max-requests-per-connection">
+<h3>max_requests_per_connection</h3>
+<p>(UInt32Value) Optional maximum requests for both upstream and downstream connections. If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive. For HTTP/2 and HTTP/3, due to concurrent stream processing, the limit is approximate.</p>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/envoyproxy/envoy/issues/14910#issuecomment-840892488">Github Issue: Forward Connection:Close header to downstream#14910</a></p>
+<p>We are having this same issue when using istio (<a class="reference external" href="https://github.com/istio/istio/issues/32516">istio/istio#32516</a>). We are migrating to use istio with envoy sidecars frontend be an AWS ELB. We see that connections from ELB -&gt; envoy stay open even when our application is sending <code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">Close</span></code>. <code class="docutils literal notranslate"><span class="pre">max_connection_duration</span></code> works but does not seem to be the best option. Our applications are smart enough to know when they are overloaded from a client and send <code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">Close</span></code> to shard load.</p>
+<p>I tried writing an envoy filter to get around this but the filter gets applied before the stripping. Did anyone discover a way to forward the connection close header?</p>
+</div></blockquote>
+</section>
+<section id="drain-timeout-for-downstream-only">
+<h3>drain_timeout - for downstream only</h3>
+<blockquote>
+<div><p><a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#:~:text=request_headers_timeout%3A%2010s-,drain_timeout,-(Duration)%20The">Envoy Doc</a></p>
+</div></blockquote>
+<blockquote>
+<div><p>(Duration) The time that Envoy will wait between sending an HTTP/2 “shutdown notification” (GOAWAY frame with max stream ID) and a final GOAWAY frame. This is used so that Envoy provides a grace period for new streams that race with the final GOAWAY frame. During this grace period, Envoy will continue to accept new streams.
+After the grace period, a final GOAWAY frame is sent and Envoy will start refusing new streams. Draining occurs both when:</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>a connection hits the <code class="docutils literal notranslate"><span class="pre">idle</span> <span class="pre">timeout</span></code></p>
+<ul>
+<li><p>即系连接到达 <code class="docutils literal notranslate"><span class="pre">idle_timeout</span></code> 或 <code class="docutils literal notranslate"><span class="pre">max_connection_duration</span></code>后，都会开始 <code class="docutils literal notranslate"><span class="pre">draining</span></code> 的状态和<code class="docutils literal notranslate"><span class="pre">drain_timeout</span></code>计时器。对于 HTTP/1.1，在 <code class="docutils literal notranslate"><span class="pre">draining</span></code> 状态下。如果 downstream 过来请求，Envoy 都在响应中加入 <code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">close</span></code>  header。</p></li>
+<li><p>所以只有连接发生 <code class="docutils literal notranslate"><span class="pre">idle_timeout</span></code> 或 <code class="docutils literal notranslate"><span class="pre">max_connection_duration</span></code>后，才会进入 <code class="docutils literal notranslate"><span class="pre">draining</span></code> 的状态和<code class="docutils literal notranslate"><span class="pre">drain_timeout</span></code>计时器。</p></li>
+</ul>
+</li>
+<li><p>or during general server draining.</p></li>
+</ul>
+<p>The default grace period is 5000 milliseconds (5 seconds) if this option is not specified.</p>
+<blockquote>
+<div><p><a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/draining">https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/draining</a></p>
+<p>By default, the <code class="docutils literal notranslate"><span class="pre">HTTP</span> <span class="pre">connection</span> <span class="pre">manager</span> <span class="pre">filter</span></code> will add “<code class="docutils literal notranslate"><span class="pre">Connection:</span> <span class="pre">close</span></code>” to HTTP1 requests(笔者注：By HTTP Response), send HTTP2 GOAWAY, and terminate connections on request completion (after the delayed close period).</p>
+</div></blockquote>
+<p>我曾经认为， drain 只在 Envoy 要 shutdown 时才触发。现在看来，只要是有计划的关闭连接（连接到达 <code class="docutils literal notranslate"><span class="pre">idle_timeout</span></code> 或 <code class="docutils literal notranslate"><span class="pre">max_connection_duration</span></code>后），都应该走 drain 流程。</p>
+</section>
+<section id="delayed-close-timeout-for-downstream-only">
+<h3>delayed_close_timeout - for downstream only</h3>
+<blockquote>
+<div><p>(Duration) The delayed close timeout is for downstream connections managed by the HTTP connection manager. It is defined as a grace period after connection close processing has been locally initiated during which Envoy will wait for the peer to close (i.e., a TCP FIN/RST is received by Envoy from the downstream connection) prior to Envoy closing the socket associated with that connection。</p>
+</div></blockquote>
+<p>即系在一些场景下，Envoy 会在未完全读取完 HTTP Request 前，就回写 HTTP Response 且希望关闭连接。这叫 <code class="docutils literal notranslate"><span class="pre">服务端过早关闭连接(Server</span> <span class="pre">Prematurely/Early</span> <span class="pre">Closes</span> <span class="pre">Connection)</span></code>。这时有几种可能情况：</p>
+<ul class="simple">
+<li><p>downstream 还在发送 HTTP Request 当中(socket write)。</p></li>
+<li><p>或者是 Envoy 的 kernel 中，还有 <code class="docutils literal notranslate"><span class="pre">socket</span> <span class="pre">recv</span> <span class="pre">buffer</span></code> 未被 Envoy user-space 进取。通常是 HTTP Content-Length 大小的 BODY 还在内核的 <code class="docutils literal notranslate"><span class="pre">socket</span> <span class="pre">recv</span> <span class="pre">buffer</span></code> 中，未完整加载到 Envoy user-space</p></li>
+</ul>
+<p>这两种情况下， 如果 Envoy 调用 <code class="docutils literal notranslate"><span class="pre">close(fd)</span></code> 去关闭连接， downstream 均可能会收到来自 Envoy kernel 的 <code class="docutils literal notranslate"><span class="pre">RST</span></code> 。最终 downstream 可能不会 read socket 中的 HTTP Response 就直接认为连接异常，向上层报告异常：<code class="docutils literal notranslate"><span class="pre">Peer</span> <span class="pre">connection</span> <span class="pre">rest</span></code>。</p>
+<p>详见：<a class="reference internal" href="connection-life-race.xhtml"><span class="doc">Envoy 连接关闭后的竞态条件</span></a> 。</p>
+<p>为缓解这种情况，Envoy 提供了延后关闭连接的配置。希望等待 downstream 完成 socket write 的过程。让  <code class="docutils literal notranslate"><span class="pre">kernel</span> <span class="pre">socket</span> <span class="pre">recv</span> <span class="pre">buffer</span></code>  数据都加载到 <code class="docutils literal notranslate"><span class="pre">user</span> <span class="pre">space</span></code> 中。再去调用 <code class="docutils literal notranslate"><span class="pre">close(fd)</span></code>。</p>
+<blockquote>
+<div><p>NOTE: This timeout is enforced even when the socket associated with the downstream connection is pending a flush of the write buffer. However, any progress made writing data to the socket will restart the timer associated with this timeout. This means that the total grace period for a socket in this state will be <code class="docutils literal notranslate"><span class="pre">&lt;total_time_waiting_for_write_buffer_flushes&gt;+&lt;delayed_close_timeout&gt;</span></code>.</p>
+</div></blockquote>
+<p>即系，每次 write socket 成功，这个 timer 均会被 rest.</p>
+<p>Delaying Envoy’s connection close and giving the peer the opportunity to initiate the close sequence mitigates(缓解) a race condition that exists when <strong>downstream clients do not drain/process data in a connection’s receive buffer</strong> after a remote close has been detected via a socket write().  即系，可以缓解 downsteam 在 write socket 失败后，就不去 read socket 取 Response 的情况。</p>
+<p>This race leads to such clients failing to process the response code sent by Envoy, which could result in erroneous downstream processing.</p>
+<p>If the timeout triggers, Envoy will close the connection’s socket.</p>
+<p>The default timeout is 1000 ms if this option is not specified.</p>
+<blockquote>
+<div><p>Note:</p>
+<p>To be useful in avoiding the race condition described above, this timeout must be set to at least <max round trip time expected between clients and Envoy>+&lt;100ms to account for a reasonable “worst” case processing time for a full iteration of Envoy’s event loop&gt;.</p>
+</div></blockquote>
+<blockquote>
+<div><p>Warning:</p>
+<p>A value of 0 will completely disable delayed close processing. When disabled, the downstream connection’s socket will be closed immediately after the write flush is completed or will never close if the write flush does not complete.</p>
+</div></blockquote>
+<p>需要注意的是，为了不影响性能，<code class="docutils literal notranslate"><span class="pre">delayed_close_timeout</span></code> 在很多情况下是不会生效的：</p>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/envoyproxy/envoy/pull/19863">Github PR: http: reduce delay-close issues for HTTP/1.1 and below #19863</a></p>
+<p>Skipping delay close for:</p>
+<ul class="simple">
+<li><p>HTTP/1.0 framed by connection close (as it simply reduces time to end-framing)</p></li>
+<li><p>as well as HTTP/1.1 if the request is fully read (so there’s no FIN-RST race)。即系如果</p></li>
+</ul>
+<p>Addresses the Envoy-specific parts of #19821
+Runtime guard: <code class="docutils literal notranslate"><span class="pre">envoy.reloadable_features.skip_delay_close</span></code></p>
+<p>同时出现在 <a class="reference external" href="https://www.envoyproxy.io/docs/envoy/latest/version_history/v1.22/v1.22.0">Envoy 1.22.0 的 Release Note</a> 里：</p>
+<p><strong>http</strong>: avoiding <code class="docutils literal notranslate"><span class="pre">delay-close</span></code> for:</p>
+<ul class="simple">
+<li><p>HTTP/1.0 responses framed by <code class="docutils literal notranslate"><span class="pre">connection:</span> <span class="pre">close</span></code></p></li>
+<li><p>as well as HTTP/1.1 if the request is fully read.</p></li>
+</ul>
+<p>This means for responses to such requests, the FIN will be sent immediately after the response. This behavior can be temporarily reverted by setting <code class="docutils literal notranslate"><span class="pre">envoy.reloadable_features.skip_delay_close</span></code> to false. If clients are seen to be receiving sporadic partial responses and flipping this flag fixes it, please notify the project immediately.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="envoy">
+<h2>Envoy 连接关闭后的竞态条件</h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="connection-life-race.xhtml">Envoy 连接关闭后的竞态条件</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="connection-life-race.xhtml#envoy-downstream-upstream">Envoy 与 Downstream/Upstream 连接状态不同步</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="connection-life-race.xhtml#downstream-envoy">Downstream 向 Envoy 关闭中的连接发送请求</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="connection-life-race.xhtml#id1">Envoy 实现上的缓解</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="connection-life-race.xhtml#server-prematurely-early-closes-connection">缓解 服务端过早关闭连接(Server Prematurely/Early Closes Connection)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="connection-life-race.xhtml#envoy-upstream-upstream">Envoy 向已被 Upstream 关闭的 Upstream 连接发送请求</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="connection-life-race.xhtml#envoy-2">Envoy 实现上的缓解 2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="connection-life-race.xhtml#istio">Istio 配置上缓解</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

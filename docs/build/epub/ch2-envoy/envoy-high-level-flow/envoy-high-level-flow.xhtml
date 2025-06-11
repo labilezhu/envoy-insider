@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Envoy 抽象主流程与概念</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="envoy">
+<h1>Envoy 抽象主流程与概念</h1>
+<section id="upstream-upstream">
+<h2>再说 upstream/upstream</h2>
+<p>让我们回到 <a class="reference internal" href="../envoy-istio-conf-eg.xhtml"><span class="doc">Istio 下 Envoy 配置举例</span></a> 的例子：</p>
+<figure class="align-default" id="id1">
+<img alt="I图:Istio 里的 Envoy 配置 - 部署" src="../../_images/istio-data-panel-arch.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>图:Istio 里的 Envoy 配置 - 部署</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fistio-data-panel-arch.drawio.svg">用 Draw.io 打开</a></em></p>
+<p>这里，我们只分析 <code class="docutils literal notranslate"><span class="pre">fortio-server(pod)</span></code> 内的事情。从 POD 的流量角度来讲，它可以再分为两部分：</p>
+<ul class="simple">
+<li><p>inbound : 入站（被调用）</p></li>
+<li><p>outbound : 出站（对外调用）</p></li>
+</ul>
+<p>但单单从 Envoy 实现角度看，其实很少使用 <code class="docutils literal notranslate"><span class="pre">inbound</span></code> 或 <code class="docutils literal notranslate"><span class="pre">outbound</span></code> <code class="docutils literal notranslate"><span class="pre">这个概念的。inbound</span></code>/<code class="docutils literal notranslate"><span class="pre">outbound</span></code> 主要是 Istio 里的概念。详见： <a class="reference internal" href="../../ch1-istio-arch/service-mesh-base-concept.xhtml"><span class="doc">Service Mesh 的一些基础概念</span></a>
+一节。 Envoy 主要使用 <code class="docutils literal notranslate"><span class="pre">upstream</span></code> 与 <code class="docutils literal notranslate"><span class="pre">downstream</span></code> 的概念。</p>
+<p>对于 <code class="docutils literal notranslate"><span class="pre">fortio-server(pod)</span></code> 的 inbound:</p>
+<ul class="simple">
+<li><p>downstream: client pod</p></li>
+<li><p>upstream: app:8080</p></li>
+</ul>
+<p>对于 <code class="docutils literal notranslate"><span class="pre">fortio-server(pod)</span></code> 的 outbound:</p>
+<ul class="simple">
+<li><p>downstream: app</p></li>
+<li><p>upstream: <code class="docutils literal notranslate"><span class="pre">fortio-server-l2(pod)</span></code>:8080</p></li>
+</ul>
+<p>当初，我开始学习 Istio 时，最难理解的就是上面的概念了。这个弯太难转了。即：</p>
+<div class="admonition attention">
+<p class="admonition-title">注意</p>
+<p>在 Istio 里，从 POD 内的 Envoy Proxy 角度看，同一 POD 内的 app/service 进程，只是一个普通的 <code class="docutils literal notranslate"><span class="pre">upstream</span> <span class="pre">cluster</span></code>。而当这个 app 调用其它 POD 上运行的 service 时，目标 POD 也是一个 <code class="docutils literal notranslate"><span class="pre">upstream</span> <span class="pre">cluster</span></code>。 概念上是一样的。</p>
+</div>
+<figure class="align-default" id="envoy-upstream-downstream">
+<img alt="从 Envoy 概念看 upstream 与 downstream 抽象流程" src="../../_images/envoy-high-level-flow-abstract.drawio.svg" /><figcaption>
+<p><span class="caption-text"><em>从 Envoy 概念看 upstream 与 downstream 抽象流程</em></span></p>
+</figcaption>
+</figure>
+<p><em><a class="reference external" href="https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fenvoy-high-level-flow-abstract.drawio.svg">用 Draw.io 打开</a></em></p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

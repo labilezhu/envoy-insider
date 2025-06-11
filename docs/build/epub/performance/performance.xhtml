@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Istio/Envoy 性能</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/epub.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <section id="istio-envoy">
+<h1>Istio/Envoy 性能</h1>
+<section id="id1">
+<h2>我的一些文章</h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://blog.mygraphql.com/zh/posts/cloud/istio/istio-tunning/istio-filter-tunning-thread/">记一次 Istio 冲刺调优</a></p></li>
+<li><p><a class="reference external" href="https://blog.mygraphql.com/zh/posts/cloud/istio/istio-tunning/istio-thread-balance/">记一次 Istio 调优 Part 2 —— 饥饿的线程与 SO_REUSEPORT</a></p></li>
+</ul>
+</section>
+<section id="id2">
+<h2>影响性能的因素 - 设计容量</h2>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/istio/istio/wiki/Performance-Questionnaire">https://github.com/istio/istio/wiki/Performance-Questionnaire</a></p>
+</div></blockquote>
+<p>When deploying Istio in production it is important to know the scale of the deployment. It is useful to have answers to the following questions when talking about scale.</p>
+<p>Scale is split across several axes</p>
+<ol class="arabic simple">
+<li><p>Services and endpoints</p>
+<ul class="simple">
+<li><p>Number of sidecars</p></li>
+<li><p>Number of endpoints</p></li>
+<li><p>Number of services</p></li>
+<li><p>Number of nodes in the cluster</p></li>
+</ul>
+</li>
+<li><p>Amount of ingress traffic</p></li>
+<li><p>Amount of egress traffic</p></li>
+<li><p>Amount of traffic flowing through the system</p>
+<ul class="simple">
+<li><p>HTTP / HTTP2</p>
+<ul>
+<li><p>request per second</p></li>
+<li><p>payload size</p></li>
+<li><p>connections per second</p></li>
+<li><p>active connections</p></li>
+</ul>
+</li>
+<li><p>TCP</p>
+<ul>
+<li><p>connections per second</p></li>
+<li><p>active connections</p></li>
+<li><p>bytes transferred per second</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Amount of configuration</p>
+<ul class="simple">
+<li><p>Number of virtual services</p></li>
+<li><p>Number of destination rules</p></li>
+<li><p>Number of gateways</p></li>
+<li><p>Number of metrics being collected</p></li>
+<li><p>Number of Istio Rbac rules</p></li>
+</ul>
+</li>
+<li><p>Rate of change of deployment How often are deployments updated.</p></li>
+<li><p>Rate of change of configuration How often does new configuration get pushed.</p></li>
+</ol>
+</section>
+<section id="benchmark">
+<h2>Benchmark</h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://istio.io/latest/docs/ops/deployment/performance-and-scalability/">Istio Release benchmark</a></p></li>
+<li><p><a class="reference external" href="https://github.com/istio/tools/tree/master/perf/benchmark"> Python scripts to benchmark Istio’s data plane performance</a></p></li>
+</ul>
+</section>
+<section id="analyzing-istio-performance">
+<h2>Analyzing Istio Performance</h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/istio/istio/wiki/Analyzing-Istio-Performance">Analyzing Istio Performance</a></p></li>
+</ul>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>
