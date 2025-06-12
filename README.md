@@ -34,8 +34,8 @@
 
 ### 书的访问地址
 - [https://envoy-insider.mygraphql.com](https://envoy-insider.mygraphql.com)
-- [https://istio-insider.readthedocs.io](https://istio-insider.readthedocs.io)
-- [https://istio-insider.rtfd.io](https://istio-insider.rtfd.io)
+- [https://envoy-insider.readthedocs.io](https://envoy-insider.readthedocs.io)
+- [https://envoy-insider.rtfd.io](https://envoy-insider.rtfd.io)
 
 
 ### 关于作者

@@ -39,8 +39,8 @@
 ### 书的访问地址
 
 - [https://envoy-insider.mygraphql.com](https://envoy-insider.mygraphql.com)
-- [https://istio-insider.readthedocs.io](https://istio-insider.readthedocs.io)
-- [https://istio-insider.rtfd.io](https://istio-insider.rtfd.io)
+- [https://envoy-insider.readthedocs.io](https://envoy-insider.readthedocs.io)
+- [https://envoy-insider.rtfd.io](https://envoy-insider.rtfd.io)
 
 
 
@@ -93,7 +93,7 @@ and productive life. To my dear wife and our amazing kid – thanks for all your
 ### 意见反馈
 
 由于自称是开源交互图书，读者的反馈当然非常重要。如果你发现书中的错误，或者有更好的建议，不妨来这里提 Issue:  
-[https://github.com/labilezhu/istio-insider/issues](https://github.com/labilezhu/istio-insider/issues)
+[https://github.com/labilezhu/envoy-insider/issues](https://github.com/labilezhu/envoy-insider/issues)
 
 
 
