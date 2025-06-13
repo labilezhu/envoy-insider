@@ -104,6 +104,8 @@ There is an English version: [https://envoy-insider.mygraphql.com/en/latest/](ht
 
 ![](wechat-reward-qrcode.jpg)
 
+![Book Cover](./book-cover-800.jpg)
+
 
 # 目录
 
@@ -114,15 +116,19 @@ There is an English version: [https://envoy-insider.mygraphql.com/en/latest/](ht
 :includehidden:
 
 ch0/index
-ch1-istio-arch/index
-ch2-envoy/index
-ch4-istio-data-plane/index
-ch5-istio-ambient/ch5-istio-ambient.md
+envoy-overview.md
+envoy-istio-conf-eg.md
+envoy-high-level-flow/envoy-high-level-flow.md
+arch/arch.md
+req-resp-flow-timeline/req-resp-flow-timeline.md
+connection-life/connection-life.md
+envoy-istio-metrics/index.md
+upstream/upstream.md
+socket/socket.md
 performance/performance.md
 disruptions/disruptions.md
 observability/observability.md
 troubleshooting/troubleshooting.md
-dev-istio/dev-istio.md
 ```
 
 # 附录
