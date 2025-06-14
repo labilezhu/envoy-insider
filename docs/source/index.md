@@ -127,14 +127,5 @@ performance/performance.md
 disruptions/disruptions.md
 observability/observability.md
 troubleshooting/troubleshooting.md
-```
-
-# 附录
-
-```{toctree}
-:caption: 附录
-:maxdepth: 5
-:includehidden:
-
-appendix-lab-env/index.md
+dev-envoy/dev-envoy.md
 ```
