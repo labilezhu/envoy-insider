@@ -9,7 +9,7 @@ Istio 的 istio-proxy 的数据面指标是 基于 Envoy 的指标构架实现�
 
 :::{figure-md} 图：Envoy@Istio的指标
 
-<img src="/ch2-envoy/envoy-istio-metrics/index.assets/envoy-istio-metrics.drawio.svg" alt="Inbound与Outbound概念">
+<img src="/envoy-istio-metrics/index.assets/envoy-istio-metrics.drawio.svg" alt="Inbound与Outbound概念">
 
 *图：Envoy@Istio的指标*
 :::
@@ -20,7 +20,7 @@ Istio 的 istio-proxy 的数据面指标是 基于 Envoy 的指标构架实现�
 :::{figure-md}
 :class: full-width
 
-<img src="/ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline.drawio.svg" alt="图：Envoy 请求与响应时序线上的指标">
+<img src="/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline.drawio.svg" alt="图：Envoy 请求与响应时序线上的指标">
 
 *图：Envoy 请求与响应时序线上的指标*
 :::

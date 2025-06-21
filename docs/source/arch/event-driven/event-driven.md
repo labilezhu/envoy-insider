@@ -6,7 +6,7 @@ typora-root-url: ../../..
 
 :::{figure-md} 图： Event Loop of Envoy
 
-<img src="/ch2-envoy/arch/event-driven/event-driven.assets/envoy-event-model-loop.drawio.svg" alt="图 - Event Loop of Envoy">
+<img src="/arch/event-driven/event-driven.assets/envoy-event-model-loop.drawio.svg" alt="图 - Event Loop of Envoy">
 
 *图： Event Loop of Envoy*
 :::
@@ -17,7 +17,7 @@ typora-root-url: ../../..
 说明一下图中的流程：
 1. Envoy worker 线程挂起在 `epoll_wait()` 方法中，在内核中注册等待 epoll 关注的 socket 发生事件。线程被移出 kernel 的 runnable queue。线程睡眠。
 2. 内核收到 TCP 网络包，触发事件
-3. 操作系统把 Envoy worker 线程被移入 kernel 的 runnable queue。Envoy worker 线程被唤醒，变成 runnable。操作系统发现可用 cpu 资源，把 runnable 的 envoy worker 线程调度上 cpu。（注意，runnable 和 调度上 cpu 不是一次完成的）
+3. 操作系统把 Envoy worker 线程移入 kernel 的 runnable queue。Envoy worker 线程被唤醒，变成 runnable。操作系统发现可用 cpu 资源，把 runnable 的 envoy worker 线程调度上 cpu。（注意，runnable 和 调度上 cpu 不是一次完成的）
 4. Envoy 分析事件列表，按事件列表的 fd 调度到不同的 `FileEventImpl` 类的回调函数（实现见：`FileEventImpl::assignEvents`）
 5. `FileEventImpl` 类的回调函数调用实际的业务回调函数
 6. 执行 Envoy 的实际代理行为
@@ -28,19 +28,19 @@ typora-root-url: ../../..
 ## HTTP 反向代理的总流程
 
 整体看，Socket 事件驱动的 HTTP 反向代理总流程如下：
-![图：Socket 事件驱动的 HTTP 反向代理总流程](/ch2-envoy/arch/event-driven/event-driven.assets/envoy-event-model-proxy.drawio.svg)
+![图：Socket 事件驱动的 HTTP 反向代理总流程](/arch/event-driven/event-driven.assets/envoy-event-model-proxy.drawio.svg)
 
 图中看出，有 5 种事件驱动了整个流程。后面几节会逐个分析。
 
 ## Downstream TCP 连接建立
 
 现在看看，事件驱动和连接的建立的过程和关系：
-![envoy-event-model-accept](/ch2-envoy/arch/event-driven/event-driven.assets/envoy-event-model-accept.drawio.svg)
+![envoy-event-model-accept](/arch/event-driven/event-driven.assets/envoy-event-model-accept.drawio.svg)
 
 
 1. Envoy worker 线程挂起在 `epoll_wait()` 方法中。线程被移出 kernel 的 runnable queue。线程睡眠。
 2. client 建立连接，server 内核完成3次握手，触发 listen socket 事件。
-   - 操作系统把 Envoy worker 线程被移入 kernel 的 runnable queue。Envoy worker 线程被唤醒，变成 runnable。操作系统发现可用 cpu 资源，把 runnable 的 envoy worker 线程调度上 cpu。（注意，runnable 和 调度上 cpu 不是一次完成的）
+   - 操作系统把 Envoy worker 线程移入 kernel 的 runnable queue。Envoy worker 线程被唤醒，变成 runnable。操作系统发现可用 cpu 资源，把 runnable 的 envoy worker 线程调度上 cpu。（注意，runnable 和 调度上 cpu 不是一次完成的）
 3. Envoy 分析事件列表，按事件列表的 fd 调度到不同的 `FileEventImpl` 类的回调函数（实现见：`FileEventImpl::assignEvents`）
 4. FileEventImpl 类的回调函数调用实际的业务回调函数，进行 syscall `accept`，完成 socket 连接。得到新 socket 的 FD: `$new_socket_fd`。
 5. 业务回调函数把 调用 `epoll_ctl` 把 `$new_socket_fd ` 加到 epoll 监听中。
@@ -57,7 +57,7 @@ Envoy 使用了 libevent 这个 C 编写的事件 library。还在其上作了 C
 
 :::{figure-md} 图: Envoy 事件的抽象封装模型
 
-<img src="/ch2-envoy/arch/event-driven/event-driven.assets/abstract-event-model.drawio.svg" alt="图 - Envoy 事件的抽象封装模型">
+<img src="/arch/event-driven/event-driven.assets/abstract-event-model.drawio.svg" alt="图 - Envoy 事件的抽象封装模型">
 
 *图: Envoy 事件的抽象封装模型*
 :::

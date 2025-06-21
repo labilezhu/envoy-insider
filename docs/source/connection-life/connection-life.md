@@ -15,7 +15,7 @@
 :::{figure-md}
 :class: full-width
 
-<img src="/ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline.drawio.svg" alt="图：Envoy 连接 timeout 时序线">
+<img src="/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline.drawio.svg" alt="图：Envoy 连接 timeout 时序线">
 
 *图：Envoy 连接 timeout 时序线*
 :::

@@ -71,7 +71,7 @@ TCP 和 `TLS 终点` 的流量控制是通过“`Network::ConnectionImpl`” 写
 
 
 ```{note}
-如果读者对 Envoy 的 http-connection-manager 和 http filter chain 了解不多，建议先读本书的： {doc}`/ch2-envoy/arch/http/http-connection-manager/http-connection-manager` 一节。下面的内容假设读者已经了解这些知识。
+如果读者对 Envoy 的 http-connection-manager 和 http filter chain 了解不多，建议先读本书的： {doc}`/arch/http/http-connection-manager/http-connection-manager` 一节。下面的内容假设读者已经了解这些知识。
 ```
 
 
@@ -93,7 +93,7 @@ TCP 和 `TLS 终点` 的流量控制是通过“`Network::ConnectionImpl`” 写
 
 :::{figure-md} Figure: Downstream connection 拥塞与背压概述
 
-<img src="/ch2-envoy/arch/flow-control/flow-control-1-2-downstream-backs-up-overview.drawio.svg" alt="Figure Downstream connection 拥塞与背压概述">
+<img src="/arch/flow-control/flow-control-1-2-downstream-backs-up-overview.drawio.svg" alt="Figure Downstream connection 拥塞与背压概述">
 
 *Figure: Downstream connection 拥塞与背压概述*
 :::
@@ -103,7 +103,7 @@ TCP 和 `TLS 终点` 的流量控制是通过“`Network::ConnectionImpl`” 写
 
 :::{figure-md} Upstream connection 拥塞与背压
 
-<img src="/ch2-envoy/arch/flow-control/flow-control-1-upstream-backs-up-simple.drawio.svg" alt="Upstream connection 拥塞与背压">
+<img src="/arch/flow-control/flow-control-1-upstream-backs-up-simple.drawio.svg" alt="Upstream connection 拥塞与背压">
 
 *Upstream connection 拥塞与背压*
 :::
@@ -161,7 +161,7 @@ void ConnectionImpl::StreamImpl::readDisable(bool disable) {
 
 :::{figure-md} Upstream connection 与 Upstream http stream 同时拥塞
 
-<img src="/ch2-envoy/arch/flow-control/flow-control-2-upstream-backs-up-counter.drawio.svg" alt="Upstream connection 与 Upstream http stream 同时拥塞">
+<img src="/arch/flow-control/flow-control-2-upstream-backs-up-counter.drawio.svg" alt="Upstream connection 与 Upstream http stream 同时拥塞">
 
 *Upstream connection 与 Upstream http stream 同时拥塞*
 :::
@@ -179,7 +179,7 @@ void ConnectionImpl::StreamImpl::readDisable(bool disable) {
 
 :::{figure-md}  Upstream 拥塞时 Router::Filter 的协作
 
-<img src="/ch2-envoy/arch/flow-control/flow-control-3-upstream-backs-up-router.drawio.svg" alt="Upstream 拥塞时 Router::Filter 的协作">
+<img src="/arch/flow-control/flow-control-3-upstream-backs-up-router.drawio.svg" alt="Upstream 拥塞时 Router::Filter 的协作">
 
 *Upstream 拥塞时 Router::Filter 的协作*
 :::
@@ -203,7 +203,7 @@ void ConnectionImpl::StreamImpl::readDisable(bool disable) {
 
 :::{figure-md} Downstream 拥塞时 Http::ConnectionManagerImpl 的协作
 
-<img src="/ch2-envoy/arch/flow-control/flow-control-4-downstream-conn-backs-up.drawio.svg" alt="Downstream 拥塞时 Http::ConnectionManagerImpl 的协作">
+<img src="/arch/flow-control/flow-control-4-downstream-conn-backs-up.drawio.svg" alt="Downstream 拥塞时 Http::ConnectionManagerImpl 的协作">
 
 *Downstream 拥塞时 Http::ConnectionManagerImpl 的协作*
 :::
@@ -350,7 +350,7 @@ For the low watermark path:
 
 :::{figure-md}  Upstream 拥塞时 Router::Filter 的协作(2)
 
-<img src="/ch2-envoy/arch/flow-control/flow-control-3-upstream-backs-up-router.drawio.svg" alt="Upstream 拥塞时 Router::Filter 的协作">
+<img src="/arch/flow-control/flow-control-3-upstream-backs-up-router.drawio.svg" alt="Upstream 拥塞时 Router::Filter 的协作">
 
 *Upstream 拥塞时 Router::Filter 的协作*
 :::
@@ -402,7 +402,7 @@ As with the downstream network buffer, it is important that as new upstream stre
 
 :::{figure-md} Upstream connection 拥塞时 Router::Filter 的协作
 
-<img src="/ch2-envoy/arch/flow-control/flow-control-3-2-upstream-conn-backs-up-router.drawio.svg" alt="Upstream connection 拥塞时 Router::Filter 的协作">
+<img src="/arch/flow-control/flow-control-3-2-upstream-conn-backs-up-router.drawio.svg" alt="Upstream connection 拥塞时 Router::Filter 的协作">
 
 *Upstream connection 拥塞时 Router::Filter 的协作*
 :::

@@ -4,7 +4,7 @@ Router 流程简述:
 
 :::{figure-md} 图：Router 流程简述
 :class: full-width
-<img src="/ch2-envoy/arch/http/router/router.assets/router-filter-base-flow.drawio.svg" alt="图：Router 流程简述">
+<img src="/arch/http/router/router.assets/router-filter-base-flow.drawio.svg" alt="图：Router 流程简述">
 
 *图：Router 流程简述*
 :::

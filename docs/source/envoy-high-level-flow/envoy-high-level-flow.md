@@ -2,7 +2,7 @@
 
 ## 再说 upstream/upstream
 
-让我们回到 {doc}`/ch2-envoy/envoy-istio-conf-eg` 的例子：
+让我们回到 {doc}`/envoy-istio-conf-eg` 的例子：
 
 
 :::{figure-md}
@@ -37,7 +37,7 @@
 
 :::{figure-md} 从 Envoy 概念看 upstream 与 downstream 抽象流程
 
-<img src="/ch2-envoy/envoy-high-level-flow/envoy-high-level-flow.assets/envoy-high-level-flow-abstract.drawio.svg" alt="从 Envoy 概念看 upstream 与 downstream 抽象流程">
+<img src="/envoy-high-level-flow/envoy-high-level-flow.assets/envoy-high-level-flow-abstract.drawio.svg" alt="从 Envoy 概念看 upstream 与 downstream 抽象流程">
 
 *从 Envoy 概念看 upstream 与 downstream 抽象流程*
 :::

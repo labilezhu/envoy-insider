@@ -6,10 +6,10 @@ typora-root-url: ../../..
 
 `Listener` 顾名思义，就是被动监听和接受连接的的组件。那么是不是每个 Listener 都会 listen socket ? 我们带着问题往下看。
 
-开始学习 Listener 前，先回顾一下前面章节的 {doc}`/ch2-envoy/envoy-istio-conf-eg` 中的例子。
+开始学习 Listener 前，先回顾一下前面章节的 {doc}`/envoy-istio-conf-eg` 中的例子。
 
 ```{note}
-这里下载 Envoy 的配置 yaml {download}`envoy@istio-conf-eg-inbound.envoy_conf.yaml </ch2-envoy/envoy-istio-conf-eg.assets/envoy@istio-conf-eg-inbound.envoy_conf.yaml>` .
+这里下载 Envoy 的配置 yaml {download}`envoy@istio-conf-eg-inbound.envoy_conf.yaml </envoy-istio-conf-eg.assets/envoy@istio-conf-eg-inbound.envoy_conf.yaml>` .
 ```
 
 :::{figure-md}
@@ -23,7 +23,7 @@ typora-root-url: ../../..
 
 :::{figure-md}
 :class: full-width
-<img src="/ch2-envoy/envoy-istio-conf-eg.assets/envoy@istio-conf-eg-inbound.drawio.svg" alt="Inbound与Outbound概念">
+<img src="/envoy-istio-conf-eg.assets/envoy@istio-conf-eg-inbound.drawio.svg" alt="Inbound与Outbound概念">
 
 *图：Istio里的 Envoy Inbound配置举例*
 :::
@@ -31,7 +31,7 @@ typora-root-url: ../../..
 
 :::{figure-md}
 :class: full-width
-<img src="/ch2-envoy/envoy-istio-conf-eg.assets/envoy@istio-conf-eg-outbound.drawio.svg" alt="图：Istio里的 Envoy Outbound 配置举例">
+<img src="/envoy-istio-conf-eg.assets/envoy@istio-conf-eg-outbound.drawio.svg" alt="图：Istio里的 Envoy Outbound 配置举例">
 
 *图：Istio里的 Envoy Outbound 配置举例*
 :::
@@ -66,7 +66,7 @@ Outbound:
 
 :::{figure-md} 图：Listener 内部组件
 
-<img src="/ch2-envoy/arch/listener/listener.assets/listener.drawio.svg" alt="图：Listener 内部组件">
+<img src="/arch/listener/listener.assets/listener.drawio.svg" alt="图：Listener 内部组件">
 
 *图：Listener 内部组件*
 :::
@@ -105,7 +105,7 @@ Listener 由 `Listener filters` 、`Network Filter Chains` 组成。
 
 :::{figure-md} 图：Listener 核心对象与启动顺序
 
-<img src="/ch2-envoy/arch/listener/listener.assets/listener-core-classes-startup-process.drawio.svg" alt="图：Listener 核心对象与启动顺序">
+<img src="/arch/listener/listener.assets/listener-core-classes-startup-process.drawio.svg" alt="图：Listener 核心对象与启动顺序">
 
 *图：Listener 核心对象与启动顺序*
 :::
@@ -149,7 +149,7 @@ Envoy 只有两种类型的 Listener 实现。TCP 和 UDP 的。这里我只看 
 
 :::{figure-md} 图：Listener TCP 连接建立流程
 
-<img src="/ch2-envoy/arch/listener/listener.assets/envoy-classes-listen-flow.drawio.svg" alt="图：Listener TCP 连接建立流程">
+<img src="/arch/listener/listener.assets/envoy-classes-listen-flow.drawio.svg" alt="图：Listener TCP 连接建立流程">
 
 *图：Listener TCP 连接建立流程*
 :::

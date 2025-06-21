@@ -4,7 +4,7 @@
 
 ## 本书概述
 
-本书名为《Envoy 内幕》，英文名《Envoy Insider》。这是一本编写中的书，现在草稿阶段。它是一本专注于 Envoy Proxy 机制和实现深入探讨的书。内容主要源于我之前写的《[Istio & Envoy 内幕》](https://istio-insider.mygraphql.com/zh-cn/latest/)一书。现在把 Envoy 部分单独抽出来，重新整理成一本书。这样做的目的是为了让读者更专注于 Envoy 的内容，而免受 Istio 的干扰。有些内容也是 Istio 无关或不适用的。所以现在独立成书。**以后《Istio & Envoy 内幕》一书将只更新 Istio 相关的内容。而把 Envoy 相关的内容更新都移到这本书《Envoy 内幕》上。**
+本书名为《Envoy 内幕》，英文名《Envoy Proxy Insider》。这是一本编写中的书，现在草稿阶段。它是一本专注于 Envoy Proxy 机制和实现深入探讨的书。内容主要源于我之前写的《[Istio & Envoy 内幕》](https://istio-insider.mygraphql.com/zh-cn/latest/)一书。现在把 Envoy 部分单独抽出来，重新整理成一本书。这样做的目的是为了让读者更专注于 Envoy 的内容，而免受 Istio 的干扰。有些内容也是 Istio 无关或不适用的。所以现在独立成书。**以后《Istio & Envoy 内幕》一书将只更新 Istio 相关的内容。而把 Envoy 相关的内容更新都移到这本书《Envoy 内幕》上。**
 
 ### 本书是什么
 

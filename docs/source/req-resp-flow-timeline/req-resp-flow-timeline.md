@@ -73,7 +73,7 @@ Envoy 应用了 `事件驱动` 设计模式。`事件驱动` 的程序，相对�
 :::{figure-md} 图：Envoy HTTP1 请求与响应调度
 :class: full-width
 
-<img src="/ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline-schedule.drawio.svg" alt="图：Envoy HTTP1 请求与响应调度">
+<img src="/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline-schedule.drawio.svg" alt="图：Envoy HTTP1 请求与响应调度">
 
 *图：Envoy HTTP1 请求与响应调度*
 :::
@@ -83,7 +83,7 @@ Envoy 应用了 `事件驱动` 设计模式。`事件驱动` 的程序，相对�
 :::{figure-md} 图：Envoy HTTP/2 请求与响应调度
 :class: full-width
 
-<img src="/ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.assets/life-of-a-request-overview-h2.drawio.svg" alt="图：Envoy HTTP/2 请求与响应调度">
+<img src="/req-resp-flow-timeline/req-resp-flow-timeline.assets/life-of-a-request-overview-h2.drawio.svg" alt="图：Envoy HTTP/2 请求与响应调度">
 
 *图：Envoy HTTP/2 请求与响应调度*
 :::
@@ -152,7 +152,7 @@ Envoy 应用了 `事件驱动` 设计模式。`事件驱动` 的程序，相对�
 :::{figure-md} 图：Envoy HTTP1 请求调度流程图
 :class: full-width
 
-<img src="/ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline-flowchart.drawio.svg" alt="图：Envoy HTTP1 请求与响应时序线">
+<img src="/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline-flowchart.drawio.svg" alt="图：Envoy HTTP1 请求与响应时序线">
 
 *图：Envoy HTTP1 请求调度流程图*
 :::
@@ -162,7 +162,7 @@ Envoy 应用了 `事件驱动` 设计模式。`事件驱动` 的程序，相对�
 :::{figure-md} 图：Envoy HTTP/2 请求调度流程图
 :class: full-width
 
-<img src="/ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline-flowchart-h2.drawio.svg" alt="图：Envoy HTTP/2 请求与响应时序线">
+<img src="/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline-flowchart-h2.drawio.svg" alt="图：Envoy HTTP/2 请求与响应时序线">
 
 *图：Envoy HTTP/2 请求调度流程图*
 :::
@@ -189,7 +189,7 @@ Envoy 应用了 `事件驱动` 设计模式。`事件驱动` 的程序，相对�
 :::{figure-md} 图：Envoy 请求与响应时序线
 :class: full-width
 
-<img src="/ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline.drawio.svg" alt="图：Envoy 请求与响应时序线">
+<img src="/req-resp-flow-timeline/req-resp-flow-timeline.assets/req-resp-flow-timeline.drawio.svg" alt="图：Envoy 请求与响应时序线">
 
 *图：Envoy 请求与响应时序线*
 :::

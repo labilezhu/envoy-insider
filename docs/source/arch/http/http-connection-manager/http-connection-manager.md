@@ -6,7 +6,7 @@
 
 :::{figure-md} 图：http connection manager 设计模型
 :class: full-width 
-<img src="/ch2-envoy/arch/http/http-connection-manager/http-connection-manager.assets/http-connection-manager.drawio.svg" alt="图：http connection manager 设计模型">
+<img src="/arch/http/http-connection-manager/http-connection-manager.assets/http-connection-manager.drawio.svg" alt="图：http connection manager 设计模型">
 
 *图：http connection manager 设计模型*
 :::
@@ -31,7 +31,7 @@ HttpFilter 在源码中叫 `StreamFilter` 或更精确叫 `Http::StreamFilterBas
 
 :::{figure-md} 图：http filter 抽象对象
 :class: full-width
-<img src="/ch2-envoy/arch/http/http-connection-manager/http-connection-manager.assets/http-filter-abstract.drawio.svg" alt="图：http filter 抽象对象">
+<img src="/arch/http/http-connection-manager/http-connection-manager.assets/http-filter-abstract.drawio.svg" alt="图：http filter 抽象对象">
 
 *图：http filter 抽象对象*
 :::
@@ -42,7 +42,7 @@ HttpFilter 在源码中叫 `StreamFilter` 或更精确叫 `Http::StreamFilterBas
 
 :::{figure-md} 图：http filter C++类关系
 :class: full-width
-<img src="/ch2-envoy/arch/http/http-connection-manager/http-connection-manager.assets/http-filter-code-oop.drawio.svg" alt="图：http filter C++类关系">
+<img src="/arch/http/http-connection-manager/http-connection-manager.assets/http-filter-code-oop.drawio.svg" alt="图：http filter C++类关系">
 
 *图：http filter C++类关系*
 :::

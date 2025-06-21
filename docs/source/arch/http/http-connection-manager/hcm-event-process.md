@@ -3,12 +3,12 @@
 ## HTTP 反向代理的总流程
 
 整体看，Socket 事件驱动的 HTTP 反向代理总流程如下：
-![图：Socket 事件驱动的 HTTP 反向代理总流程](/ch2-envoy/arch/event-driven/event-driven.assets/envoy-event-model-proxy.drawio.svg)
+![图：Socket 事件驱动的 HTTP 反向代理总流程](/arch/event-driven/event-driven.assets/envoy-event-model-proxy.drawio.svg)
 
 图中看出，有4种事件驱动了整个流程。后面几节会逐个分析。
 
 为免一下子进入各个步骤细节而让人迷途，建议读者回顾一下之前举例的所有步骤的总流程： 
-{doc}`/ch2-envoy/envoy-istio-conf-eg`
+{doc}`/envoy-istio-conf-eg`
 
 下面以 HTTP/1.1 为例，分 5 个步骤去解释 HTTP 代理的过程：
 1. Downstream Read Request 模块协作
@@ -22,7 +22,7 @@
 
 :::{figure-md} 图：Downstream Read-Ready 模块协作
 
-<img src="/ch2-envoy/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-read-down-req.drawio.svg" alt="图：Downstream Read-Ready 模块协作">
+<img src="/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-read-down-req.drawio.svg" alt="图：Downstream Read-Ready 模块协作">
 
 *图：Downstream Read-Ready 模块协作*
 :::
@@ -43,7 +43,7 @@
 
 :::{figure-md} 图：Downstream Request Router 模块协作
 
-<img src="/ch2-envoy/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-router-on-down-req-complete.drawio.svg" alt="图：Downstream Request Router 模块协作">
+<img src="/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-router-on-down-req-complete.drawio.svg" alt="图：Downstream Request Router 模块协作">
 
 *图：Downstream Request Router 模块协作*
 :::
@@ -67,7 +67,7 @@
 
 :::{figure-md} 图：upstream connect & write 模块协作
 
-<img src="/ch2-envoy/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-upstream-flow-connected-write.drawio.svg" alt="图：upstream connect & write 模块协作">
+<img src="/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-upstream-flow-connected-write.drawio.svg" alt="图：upstream connect & write 模块协作">
 
 *图：upstream connect & write 模块协作*
 :::
@@ -86,7 +86,7 @@
 
 :::{figure-md} 图：Upstream Read-Response 模块协作
 
-<img src="/ch2-envoy/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-upstream-flow-read-resp.drawio.svg" alt="图：Upstream Read-Response 模块协作">
+<img src="/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-upstream-flow-read-resp.drawio.svg" alt="图：Upstream Read-Response 模块协作">
 
 *图：Upstream Read-Response 模块协作*
 :::
@@ -98,7 +98,7 @@
 
 :::{figure-md} 图：Downstream Write Response 模块协作
 
-<img src="/ch2-envoy/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-write-down-resp.drawio.svg" alt="图：Downstream Write Response 模块协作">
+<img src="/arch/http/http-connection-manager/hcm-event-process.assets/envoy-hcm-write-down-resp.drawio.svg" alt="图：Downstream Write Response 模块协作">
 
 *图：Downstream Write Response 模块协作*
 :::

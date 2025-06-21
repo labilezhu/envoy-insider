@@ -13,7 +13,7 @@
 :::{figure-md} 图：Envoy TCP Proxy connection pool at high level
 :class: full-width
 
-<img src="/ch2-envoy/upstream/connection-pooling/connection-pooling-high-level.drawio.svg" alt="图：Envoy TCP Proxy connection pool at high level">
+<img src="/upstream/connection-pooling/connection-pooling-high-level.drawio.svg" alt="图：Envoy TCP Proxy connection pool at high level">
 
 *图：Envoy TCP Proxy connection pool at high level*
 :::
@@ -30,7 +30,7 @@
 :::{figure-md} 图：Envoy TCP Proxy connection pool at class level
 :class: full-width
 
-<img src="/ch2-envoy/upstream/connection-pooling/connection-pooling.drawio.svg" alt="图：Envoy TCP Proxy connection pool at class level">
+<img src="/upstream/connection-pooling/connection-pooling.drawio.svg" alt="图：Envoy TCP Proxy connection pool at class level">
 
 *图：Envoy TCP Proxy connection pool at class level*
 :::

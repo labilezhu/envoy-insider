@@ -25,7 +25,7 @@ Envoy 对为保证扩展性，采用多层插件化的设计模式。其中，`N
 
 :::{figure-md} 图：Model of Network Filter Framework
 
-<img src="/ch2-envoy/arch/network-filter/network-filter-framework-concept.drawio.svg" alt="图：Model of Network Filter Framework">
+<img src="/arch/network-filter/network-filter-framework-concept.drawio.svg" alt="图：Model of Network Filter Framework">
 
 *图：Model of Network Filter Framework*
 :::
@@ -52,7 +52,7 @@ Envoy 对为保证扩展性，采用多层插件化的设计模式。其中，`N
 
 :::{figure-md} 图：Network Filter 对象关系
 
-<img src="/ch2-envoy/arch/network-filter/network-filter-hierarchy.drawio.svg" alt="图：Network Filter 对象关系">
+<img src="/arch/network-filter/network-filter-hierarchy.drawio.svg" alt="图：Network Filter 对象关系">
 
 *图：Network Filter 对象关系*
 :::
@@ -67,7 +67,7 @@ Envoy 对为保证扩展性，采用多层插件化的设计模式。其中，`N
 
 :::{figure-md} 图：网络过滤器框架抽象协作
 
-<img src="/ch2-envoy/arch/network-filter/network-filter-framework.drawio.svg" alt="图：网络过滤器框架抽象协作">
+<img src="/arch/network-filter/network-filter-framework.drawio.svg" alt="图：网络过滤器框架抽象协作">
 
 *图：网络过滤器框架抽象协作*
 :::
@@ -79,7 +79,7 @@ Envoy 对为保证扩展性，采用多层插件化的设计模式。其中，`N
 
 :::{figure-md} 图：Network Filter Framework - TCP 代理过滤器示例
 
-<img src="/ch2-envoy/arch/network-filter/network-filter-tcpproxy.drawio.svg" alt="图：Network Filter Framework - TCP 代理过滤器示例">
+<img src="/arch/network-filter/network-filter-tcpproxy.drawio.svg" alt="图：Network Filter Framework - TCP 代理过滤器示例">
 
 *图：Network Filter Framework - TCP 代理过滤器示例*
 :::
@@ -90,7 +90,7 @@ Envoy 对为保证扩展性，采用多层插件化的设计模式。其中，`N
 
 :::{figure-md} 图：Network Filter - ReadFilter 协作
 
-<img src="/ch2-envoy/arch/network-filter/network-filter-readfilter.drawio.svg" alt="图：Network Filter - ReadFilter 协作">
+<img src="/arch/network-filter/network-filter-readfilter.drawio.svg" alt="图：Network Filter - ReadFilter 协作">
 
 *图：Network Filter - ReadFilter 协作*
 :::
@@ -112,7 +112,7 @@ ReadFilter 协作比较复杂，也是 Network Filter Framework 的核心逻辑�
 
 :::{figure-md} 图：NNetwork Filter - WriteFilter 协作
 
-<img src="/ch2-envoy/arch/network-filter/network-filter-writefilter.drawio.svg" alt="图：Network Filter - WriteFilter 协作">
+<img src="/arch/network-filter/network-filter-writefilter.drawio.svg" alt="图：Network Filter - WriteFilter 协作">
 
 *图：Network Filter - WriteFilter 协作*
 :::
