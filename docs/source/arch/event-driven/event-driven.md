@@ -1,5 +1,6 @@
 ---
 typora-root-url: ../../..
+to-be-english: true
 ---
 
 # 事件驱动
@@ -48,46 +49,10 @@ typora-root-url: ../../..
 
 
 
-## 事件处理抽象框架
-
-上面主要在 kernel syscall 层面上介绍事件处理的底层过程。下面介绍在 Envoy 代码层面，如何抽象和封装事件。
-
-Envoy 使用了 libevent 这个 C 编写的事件 library。还在其上作了 C++ OOP 方面的封装。
-
-
-:::{figure-md} 图: Envoy 事件的抽象封装模型
-
-<img src="/arch/event-driven/event-driven.assets/abstract-event-model.drawio.svg" alt="图 - Envoy 事件的抽象封装模型">
-
-*图: Envoy 事件的抽象封装模型*
-:::
-*[用 Draw.io 打开](https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fabstract-event-model.drawio.svg)*
-
-
-如何快速在一个重度（甚至过度）使用 OOP 封装和 OOP Design Pattern 的项目中读懂核心流程逻辑，而不是在源码海洋中无方向地漂流? 答案是：找到主线。 对于 Envoy 的事件处理，主线当然是 `libevent` 的 `event_base` ，`event` 。如果你对 libevent 还不了解，可以看看本书的 `libevent 核心思想` 一节。
-
-- `event` 封装到 `ImplBase` 对象中。 
-- `event_base` 包含在 `LibeventScheduler` <- `DispatcherImpl` <- `WorkerImpl` <- `ThreadImplPosix` 下
-
-然后，不同类型的 `event` ，又封装到不同的  `ImplBase` 子类中：
-- TimerImpl
-- SchedulableCallbackImpl
-- FileEventImpl
-
-其它信息上图已经比较详细，不再多言了。
-
-## libevent 核心思想
-
 ```{toctree}
 libevent.md
+event-model.md
 ```
 
 
-## 扩展阅读
 
-如果有兴趣研究实现细节，建议看看我 Blog 的文章：
-
- - [逆向工程与云原生现场分析 Part3 —— eBPF 跟踪 Istio/Envoy 事件驱动模型、连接建立、TLS 握手与 filter_chain 选择](https://blog.mygraphql.com/zh/posts/low-tec/trace/trace-istio/trace-istio-part3/)
- - [逆向工程与云原生现场分析 Part4 —— eBPF 跟踪 Istio/Envoy 之 upstream/downstream 事件驱动协作下的 HTTP 反向代理流程](https://blog.mygraphql.com/zh/posts/low-tec/trace/trace-istio/trace-istio-part4/)
-
-与 Envoy 作者 Matt Klein 的： [Envoy threading model](https://blog.envoyproxy.io/envoy-threading-model-a8d44b922310)

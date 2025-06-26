@@ -1,3 +1,12 @@
+---
+typora-root-url:/home/labile/envoy-insider/docs/source
+to-be-english: true
+---
+
+
+
+
+
 # 阅读互动图书
 
 ## 互动图书
@@ -27,9 +36,9 @@
 ```
 
 ## 语言风格
+
 由于本文不打算打印出版。也不是什么官方文档。所以语言上我是口语化的。如果读者的期望是阅读一本非常严肃的书，那么可能会失望。但不严肃不代表不严谨。  
 因为这是我写的第一本书，没多少经验。也没专人和我做校对和勘误，所以如果有错，读者可以提 Github Issue。
-
 
 ## 画图风格
 
@@ -38,4 +47,30 @@
 - 工程师图，事无巨细，只在复杂度实在超过人可以在一个平面中理解的最大限度时，才进行抽象。这种图通常规整度有限，比较工程师文化。这种风格更多见于技术电子文档。
 
 本书同时使用这两种风格的图。不过后者更常用。
+
+
+
+## 如何参透书中复杂的 UML 图
+
+:::{figure-md} 如何参透书中复杂的 UML 图
+
+<img src="/arch/event-driven/event-driven.assets/abstract-event-model.drawio.svg" alt="如何参透书中复杂的 UML 图">
+
+*如何参透书中复杂的 UML 图*
+:::
+*[用 Draw.io 打开](https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fabstract-event-model.drawio.svg)*
+
+由于本书有的图比较复杂。我花了大量时间研究的结果都以各种方式记录在各个图中了。以上图为例，要读出图中的信息，就算我自己放下图一年后，也得花很多心思。所以，这种图得用 “参透” 这个词。但也有一些方法：
+
+1. 阅读图例
+2. 设计期静态结构与关系
+   1. 浏览图中各组件（class），尝试记住它们的名字。浏览各组件（class）的属性。通过上面信息，尝试解读组件的职责。
+   2. 对于 UML 图，浏览组件（class） 之间的继承/实现/组合(Composition)/聚合(Aggregation)
+3. 运行期流程与关系。控制流与数据流
+
+
+
+
+
+
 
