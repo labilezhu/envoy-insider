@@ -13,7 +13,7 @@ to-be-english: true
 
 
 
-
+大家都认为 Envoy 是一个 Proxy 。主要实现定制逻辑的请求转发。这点没错。但与拥有高负载低延迟的其它中间件一样。设计上必须考虑负载的调度和流控。良好的调度设计必须平衡吞吐、响应时间、资源消耗(footprint) 。
 
 
 
@@ -60,13 +60,17 @@ Envoy 使用了 libevent 这个 C 编写的事件 library。还在其上作了 C
 :::
 *[用 Draw.io 打开](https://app.diagrams.net/?ui=sketch#Uhttps%3A%2F%2Fenvoy-insider.mygraphql.com%2Fzh_CN%2Flatest%2F_images%2Fabstract-event-model.drawio.svg)*
 
+如何快速在一个重度（甚至过度）使用 OOP 封装和 OOP Design Pattern 的项目中读懂核心流程逻辑，而不是在源码海洋中无方向地漂流? 答案是：找到主线。 对于 Envoy 的事件处理，主线当然是 `libevent` 的对象：
 
-如何快速在一个重度（甚至过度）使用 OOP 封装和 OOP Design Pattern 的项目中读懂核心流程逻辑，而不是在源码海洋中无方向地漂流? 答案是：找到主线。 对于 Envoy 的事件处理，主线当然是 `libevent` 的 `event_base` ，`event` 。如果你对 libevent 还不了解，可以看看本书的 `libevent 核心思想` 一节。
+-  `libevent::event_base` 
+- `libevent::event`
 
-- `event` 封装到 `ImplBase` 对象中。 
-- `event_base` 包含在 `LibeventScheduler` <- `DispatcherImpl` <- `WorkerImpl` <- `ThreadImplPosix` 下
+如果你对 libevent 还不了解，可以看看本书的 `libevent 核心思想` 一节。
 
-然后，不同类型的 `event` ，又封装到不同的  `ImplBase` 子类中：
+- `libevent::event` 封装到 `ImplBase` 对象中。 
+- `libevent::event_base` 包含在 `LibeventScheduler` <- `DispatcherImpl` <- `WorkerImpl` <- `ThreadImplPosix` 下
+
+然后，不同类型的 `libevent::event` ，又封装到不同的  `ImplBase` 子类中：
 - `TimerImpl` - 基于定时的功能都会使用它。如连接超时，闲置超时等等
 - `SchedulableCallbackImpl` - 设计上，在高负载时，Envoy 需要平衡事件处理的响应时间和吞吐量。为平衡每次  `event loop` 的工作量及避免一次 `event loop`处理太久而影响其它未处理事件的响应时效。有的内部发起的、或定时发起的处理过程，可以选择在当前`event loop` 的最后一个完成，也可以 “延后” 到下一个 `event loop` 。`SchedulableCallbackImpl`  封装这种可调度的任务。应用场景有：thead callback post / 请求重试等等
 - `FileEventImpl` - file / socket 事件
