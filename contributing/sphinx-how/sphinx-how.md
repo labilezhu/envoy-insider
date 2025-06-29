@@ -21,7 +21,7 @@
 
 ##### doc role
 ```
-{doc}`ch2-envoy/req-resp-flow-timeline/req-resp-flow-timeline`
+{doc}`req-resp-flow-timeline/req-resp-flow-timeline`
 ```
 
 

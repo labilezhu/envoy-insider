@@ -29,19 +29,19 @@ Envoy 中的流量控制是通过对每个 Buffer 进行限制 和 `watermark ca
 
 ## 一些流控相关的术语
 
-- `back up` - 因流量到达目标的速度慢或不畅顺，而发生数据拥塞在一个或多个中间环节的 Buffer 当中，导致 Buffer 空间耗尽的情况。以下一般翻译为中文：`拥塞`
+- `back up` - 因数据从发源地前往目标组件的过程速度慢或发生阻塞，而导致数据拥塞在一个或多个中间环节的 Buffer 当中，导致这些 Buffer 空间耗尽的情况。以下一般翻译为中文：`拥塞`
 - `buffers fill up` - 缓存空间到达限制上限
 - `backpressure` - 流背压是一种反馈机制，允许系统在超过处理能力时，还能响应请求而不是在负载下崩溃。当传入数据的速率超过处理或输出数据的速率时，就会发生这种情况，从而导致拥塞和潜在的数据丢失。详见：[Backpressure explained — the resisted flow of data through software](https://medium.com/@jayphelps/backpressure-explained-the-flow-of-data-through-software-2350b3e77ce7)
-- `drained` - Buffer 的排空。一般指 Buffer 由高于 low watermark，经消费下降后低于 low watermark  甚至清空的处理与排空操作。
+- High/Low Watermark - 为控制内存或 Buffer 的消耗量，但又不想频繁高频抖动触发控制操作而使用的高水位线和低水位线设计模式，详见：[What are high and low water marks in bit streaming](https://stackoverflow.com/questions/45489405/what-are-high-and-low-water-marks-in-bit-streaming)。
+- `drained` - Buffer 的排空。一般指 Buffer 中数据水位由高于 high watermark，经对输入源执行限流后，持续消费数据，直至数据水位下降到低于 low watermark  甚至清空的处理与排空操作。
 - `HTTP/2 window` - HTTP/2 标准的流控实现方法，通过`WINDOW_UPDATE` 帧指示除了现有的流量控制窗口之外，发送方还可以传输的八位字节数。详见 “[Hypertext Transfer Protocol Version 2 (HTTP/2) - 5.2. Flow Control](https://httpwg.org/specs/rfc7540.html#FlowControl)”
 - `http stream`  - HTTP/2 标准的流。详见 “[Hypertext Transfer Protocol Version 2 (HTTP/2) - 5. Streams and Multiplexing](https://httpwg.org/specs/rfc7540.html#StreamsLayer)”
-- High/Low Watermark - 为控制内存或 Buffer 的消耗量，但又不想频繁高频抖动触发控制操作而使用的高水位线和低水位线设计模式，详见：[What are high and low water marks in bit streaming](https://stackoverflow.com/questions/45489405/what-are-high-and-low-water-marks-in-bit-streaming)。
 
 
 
 ## TCP 流控实现
 
-TCP 和 `TLS 终点` 的流量控制是通过“`Network::ConnectionImpl`” 写入 Buffer 和 “`Network::TcpProxy ` Filter” 之间的协调来处理的。
+TCP 和 `TLS 终点` 的流量控制是通过 `Network::ConnectionImpl` 的 Write Buffer 和 `Network::TcpProxy` Filter 之间的协调来处理的。
 
 
 `Downstream`的流量控制如下。
@@ -60,7 +60,7 @@ TCP 和 `TLS 终点` 的流量控制是通过“`Network::ConnectionImpl`” 写
 
 
 
-子系统和 Callback 机制可见本书的： {ref}`ch2-envoy/arch/oop/oop:Callback回调设计模式`  一节。
+子系统和 Callback 机制可见本书的： {ref}`arch/oop/oop:Callback回调设计模式`  一节。
 
 
 
@@ -379,7 +379,7 @@ The high watermark path is as follows:
    calls `StreamDecoderFilterCallback::onDecoderFilterAboveWriteBufferHighWatermark()`.
  * When `Envoy::Http::ConnectionManagerImpl` receives
  `onDecoderFilterAboveWriteBufferHighWatermark()` it calls `readDisable(true)` on the downstream
- stream to pause data.
+  stream to pause data.
 
 The low watermark path is as follows:
 

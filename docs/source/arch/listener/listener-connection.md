@@ -30,7 +30,7 @@
 
 
 步骤是：
-1. epoll 收到连接请求，完成3次握手。最好回调到 TcpListenerImpl::onSocketEvent()。
+1. epoll 收到连接请求，完成3次握手。最后回调到 TcpListenerImpl::onSocketEvent()。
 2. 最终 syscall `accept()` 获得新 socket 的 FD。
 3. 调用 ActiveTcpListener::onAccept()
 4. 创建新连接专用的 `ListenerFilterChain` 
