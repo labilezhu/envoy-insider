@@ -155,7 +155,7 @@ void ConnectionImpl::StreamImpl::readDisable(bool disable) {
 例如：
 
 1. 如果 upstream TCP Write Buffer 窗口填满并导致网络缓冲区满，则与该`connection`关联的所有`stream`都将 `readDisable(true)` 其 Downsteam 数据源。
-2. 同时，如 HTTP/2 流控制窗口填满时，单个流可能会使用所有可用窗口并在其 Downstream 数据源上调用第二个` readDisable(true)`。 
+2. 同时，如 HTTP/2 流控制窗口填满时，单个流可能会使用所有可用窗口并在其 Downstream 数据源上调用第二个 `readDisable(true)`。 
 3. 然后，随着 Upstream TCP Write Buffer 的不断发送和排空(drains)，`connection` 将低于其低水位线，每个流将调用 `readDisable(false)` 来恢复数据流。 但同时具有网络级挂起和 H2 流控制级挂起的 `stream` 仍然不会完全启用。 
 4. 一旦 Upstream 对端发送 HTTP2 窗口更新，`stream` 缓冲区将排空，并且 Downstream 数据源将调用第二个 `readDisable(false)`，这最终将导致数据再次从 Downstream 流出。
 
@@ -379,7 +379,7 @@ The high watermark path is as follows:
    calls `StreamDecoderFilterCallback::onDecoderFilterAboveWriteBufferHighWatermark()`.
  * When `Envoy::Http::ConnectionManagerImpl` receives
  `onDecoderFilterAboveWriteBufferHighWatermark()` it calls `readDisable(true)` on the downstream
-  stream to pause data.
+    stream to pause data.
 
 The low watermark path is as follows:
 
