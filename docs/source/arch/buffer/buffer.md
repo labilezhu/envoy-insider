@@ -280,10 +280,6 @@ clusters:
   * **流量控制**: 它们对于**背压**至关重要，确保快速的发送方不会压垮慢速的接收方，从而防止 OOM（内存溢出）问题。
   * **DDoS 保护**: 缓冲可以通过在转发请求之前缓冲整个请求来保护 upsteam 服务器免受慢速攻击，确保 upsteam 以 Envoy 的速度接收请求，而不是 downstream 的速度。
 
-**主要总结：**
-
-  * 对于 HTTP/2 和 HTTP/3，主要通过协议选项中的 `initial_stream_window_size` 来控制每 Stream Buffer 。
-
 
 
 ## 参考
